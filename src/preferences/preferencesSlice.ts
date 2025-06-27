@@ -25,3 +25,5 @@ const preferencesSlice = createSlice({
 
 export const { setCategories, toggleDarkMode } = preferencesSlice.actions
 export default preferencesSlice.reducer
+
+//slices handle the global state and help update it
