@@ -1,7 +1,7 @@
 "use client";
 
-import ContentCard from "@/components/cards/ContentCard";
 import DashboardLayout from "@/components/layout/DashboardLayout";
+import ContentCard from "@/components/sections/NewsSection";
 import { useAppSelector } from "@/redux/hook";
 
 export default function FavouritesPage() {

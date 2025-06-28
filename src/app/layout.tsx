@@ -1,3 +1,4 @@
+import SessionWrapper from "@/components/SessionWrapper";
 import { Providers } from "@/redux/provider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <Providers>{children}</Providers>
+        <SessionWrapper>
+          <Providers>{children}</Providers>
+        </SessionWrapper>
       </body>
     </html>
   );
