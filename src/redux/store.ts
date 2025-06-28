@@ -1,11 +1,14 @@
 //setting up a redux store 
+// store the global state here and helps retrieve it 
 
 import preferencesReducer from '@/preferences/preferencesSlice'
 import { configureStore } from '@reduxjs/toolkit'
+import contentReducer from '@/features/content/contentSlice'
 
 export const store = configureStore({
   reducer: {
     preferences: preferencesReducer, //key - slice of state , value - reducer function (how state is managed)
+    content: contentReducer,
   },
 }) //created a store 
 

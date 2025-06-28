@@ -10,7 +10,7 @@ export async function fetchNews(categories: string[]): Promise<ContentItem[]> {
         axios.get(`https://newsapi.org/v2/top-headlines`, {
           params: {
             category,
-            country: "in",
+            country: "us",
             apiKey: NEWS_API_KEY,
           },
         })
@@ -33,7 +33,7 @@ export async function fetchNews(categories: string[]): Promise<ContentItem[]> {
   }
 }
 
-// 🧪 Mock Spotify Recommendations - this is hard coded for now set it up later with o auth 
+// 🧪 Mock Spotify Recommendations - this is hard coded for now set it up later with o auth
 export async function fetchSpotify(): Promise<ContentItem[]> {
   // This would typically involve auth + token fetching
   return [
