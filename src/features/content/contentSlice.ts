@@ -12,6 +12,7 @@ export interface ContentItem {
 
 interface ContentState {
   feed: ContentItem[];
+  searchTerm: string;
 }
 
 const loadFavouriteIds = (): Set<string> => {
@@ -25,6 +26,7 @@ const loadFavouriteIds = (): Set<string> => {
 
 const initialState: ContentState = {
   feed: [],
+  searchTerm: "",
 };
 
 const contentSlice = createSlice({
@@ -52,8 +54,13 @@ const contentSlice = createSlice({
 
       localStorage.setItem("favourites", JSON.stringify(newFavouriteIds));
     },
+
+    setSearchTerm(state, action: PayloadAction<string>) {
+      state.searchTerm = action.payload;
+    },
   },
 });
 
-export const { setFeed, toggleFavourite } = contentSlice.actions;
+export const { setSearchTerm } = contentSlice.actions; //exporting the setSearchTerm action creator
+export const { setFeed, toggleFavourite } = contentSlice.actions; //exporting the setFeed and toggleFavourite action creators
 export default contentSlice.reducer;
