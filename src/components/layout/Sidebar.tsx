@@ -5,7 +5,7 @@ import Link from "next/link";
 
 const navItems = [
   { name: "Dashboard", href: "/dashboard", icon: <Home size={20} /> },
-  { name: "Favorites", href: "/favorites", icon: <Star size={20} /> },
+  { name: "Favourites", href: "/favourites", icon: <Star size={20} /> },
   { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
 ];
 

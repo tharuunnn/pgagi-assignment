@@ -1,6 +1,6 @@
 "use client";
 
-import { ContentItem, toggleFavorite } from "@/features/content/contentSlice";
+import { ContentItem, toggleFavourite } from "@/features/content/contentSlice";
 import { useAppDispatch } from "@/redux/hook";
 import clsx from "clsx";
 import { Heart, Play } from "lucide-react";
@@ -10,8 +10,8 @@ import Link from "next/link";
 export default function ContentCard({ item }: { item: ContentItem }) {
   const dispatch = useAppDispatch();
 
-  const handleFavorite = () => {
-    dispatch(toggleFavorite(item.id));
+  const handleFavourite = () => {
+    dispatch(toggleFavourite(item.id));
   };
 
   return (
@@ -31,15 +31,15 @@ export default function ContentCard({ item }: { item: ContentItem }) {
             {item.title}
           </h3>
           <button
-            onClick={handleFavorite}
+            onClick={handleFavourite}
             className={clsx(
               "p-1 rounded-full",
-              item.isFavorite
+              item.isFavourite
                 ? "text-red-500"
                 : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
             )}
           >
-            <Heart fill={item.isFavorite ? "currentColor" : "none"} />
+            <Heart fill={item.isFavourite ? "currentColor" : "none"} />
           </button>
         </div>
 

@@ -1,48 +1,59 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
 export interface ContentItem {
-  id: string
-  type: 'news' | 'spotify'
-  title: string
-  description: string
-  image: string
-  url: string
-  isFavorite?: boolean
+  id: string;
+  title: string;
+  image: string;
+  url: string;
+  type: string;
+  description: string;
+  isFavourite?: boolean;
 }
 
 interface ContentState {
-  feed: ContentItem[]
-  favorites: ContentItem[]
+  feed: ContentItem[];
 }
+
+const loadFavouriteIds = (): Set<string> => {
+  try {
+    const stored = localStorage.getItem("favourites");
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  } catch {
+    return new Set();
+  }
+};
 
 const initialState: ContentState = {
   feed: [],
-  favorites: [],
-}
+};
 
 const contentSlice = createSlice({
-  name: 'content',
+  name: "content",
   initialState,
   reducers: {
     setFeed(state, action: PayloadAction<ContentItem[]>) {
-      state.feed = action.payload
+      const favouriteIds = loadFavouriteIds();
+
+      state.feed = action.payload.map((item) => ({
+        ...item,
+        isFavourite: favouriteIds.has(item.id),
+      }));
     },
-    toggleFavorite(state, action: PayloadAction<string>) {
-      const item = state.feed.find((i) => i.id === action.payload)
-      if (!item) return
 
-      item.isFavorite = !item.isFavorite
+    toggleFavourite(state, action: PayloadAction<string>) {
+      const item = state.feed.find((i) => i.id === action.payload);
+      if (!item) return;
 
-      if (item.isFavorite) {
-        state.favorites.push(item)
-      } else {
-        state.favorites = state.favorites.filter((i) => i.id !== item.id)
-      }
+      item.isFavourite = !item.isFavourite;
+
+      const newFavouriteIds = state.feed
+        .filter((i) => i.isFavourite)
+        .map((i) => i.id);
+
+      localStorage.setItem("favourites", JSON.stringify(newFavouriteIds));
     },
   },
-})
+});
 
-export const { setFeed, toggleFavorite } = contentSlice.actions
-export default contentSlice.reducer
-
-//manages the content state - feed, trending, favourites
+export const { setFeed, toggleFavourite } = contentSlice.actions;
+export default contentSlice.reducer;
