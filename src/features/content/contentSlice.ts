@@ -15,11 +15,12 @@ export interface ContentItem {
 interface ContentState {
   feed: ContentItem[];
   searchTerm: string;
-  fetchedCategories: string[]; // ✅ To prevent refetch
+  fetchedCategories: string[]; 
 }
 
 // 🔹 Load saved favourites
 const loadFavouriteIds = (): Set<string> => {
+  if (typeof window === "undefined") return new Set();
   try {
     const stored = localStorage.getItem("favourites");
     return stored ? new Set(JSON.parse(stored)) : new Set();
@@ -35,7 +36,7 @@ const initialState: ContentState = {
   fetchedCategories: [],
 };
 
-// ✅ Async thunk to fetch news for a single category
+// Async thunk to fetch news for a single category
 export const fetchNewsForCategory = createAsyncThunk(
   "content/fetchNewsForCategory",
   async (category: string) => {
@@ -92,7 +93,7 @@ const contentSlice = createSlice({
         }))
       );
 
-      // ✅ Add to fetched category tracker
+      // 
       if (!state.fetchedCategories.includes(category)) {
         state.fetchedCategories.push(category);
       }

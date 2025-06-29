@@ -7,7 +7,7 @@ type PreferencesState = {
 };
 
 const initialState: PreferencesState = {
-  categories: ["all"],       // ✅ Start with 'all'
+  categories: ["technology", "sports", "health", "entertainment"],     
   activeCategory: "all",
   darkMode: false,
 };
@@ -22,7 +22,6 @@ const preferencesSlice = createSlice({
     addCategory(state, action: PayloadAction<string>) {
       const cat = action.payload;
 
-      // ✅ If switching away from 'all', replace it
       if (state.categories.includes("all") && cat !== "all") {
         state.categories = [cat];
       } else if (!state.categories.includes(cat)) {
@@ -35,6 +34,9 @@ const preferencesSlice = createSlice({
     toggleDarkMode(state) {
       state.darkMode = !state.darkMode;
     },
+    setDarkMode(state, action: PayloadAction<boolean>) {
+    state.darkMode = action.payload;
+    }
   },
 });
 
@@ -43,6 +45,7 @@ export const {
   addCategory,
   setActiveCategory,
   toggleDarkMode,
+  setDarkMode,
 } = preferencesSlice.actions;
 
 export default preferencesSlice.reducer;

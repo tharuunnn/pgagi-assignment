@@ -12,9 +12,12 @@ import { Heart, Play } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import NewsCard from "@/components/cards/NewsCard"
+import { useLoadContent } from "@/features/content/useLoadContent";
 
 export default function NewsSection() {
   const dispatch = useAppDispatch();
+  useLoadContent();
 
   const feed = useAppSelector((state) => state.content.feed);
   const searchTerm = useAppSelector((state) => state.content.searchTerm);
@@ -31,13 +34,6 @@ export default function NewsSection() {
   const itemsPerPage = expanded ? 6 : 3;
 
   const allCategories = ["all", "technology", "sports", "health", "entertainment"];
-
-  // Fetch the category's content if not already done
-  useEffect(() => {
-    if (activeCategory !== "all" && !fetchedCategories.includes(activeCategory)) {
-      dispatch(fetchNewsForCategory(activeCategory));
-    }
-  }, [activeCategory, fetchedCategories, dispatch]);
 
   const filteredFeed = feed.filter((item) => {
     const title = item.title?.toLowerCase() || "";
@@ -101,58 +97,7 @@ export default function NewsSection() {
             <p className="text-gray-600 dark:text-gray-300">No content found.</p>
           ) : (
             paginatedFeed.map((item) => (
-              <div
-                key={item.id}
-                className="flex flex-col w-full max-w-sm mx-auto bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full"
-              >
-                <div className="relative w-full aspect-video overflow-hidden">
-                  <Image
-                    src={item.image || "/placeholder.png"}
-                    alt={item.title}
-                    width={400}
-                    height={250}
-                    className="object-cover rounded-t-xl"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  />
-                </div>
-                <div className="flex flex-col flex-1 p-4 gap-3">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-white line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <button
-                      onClick={() => handleFavourite(item.id)}
-                      className={clsx(
-                        "p-1 rounded-full transition-colors",
-                        item.isFavourite
-                          ? "text-red-500"
-                          : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      )}
-                    >
-                      <Heart fill={item.isFavourite ? "currentColor" : "none"} />
-                    </button>
-                  </div>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-3">
-                    {item.description}
-                  </p>
-                  <div className="mt-auto pt-2">
-                    <Link
-                      href={item.url}
-                      target="_blank"
-                      className="inline-flex items-center text-blue-700 dark:text-blue-400 font-medium hover:underline"
-                    >
-                      {item.type === "spotify" ? (
-                        <>
-                          <Play size={16} className="mr-1" />
-                          Play Now
-                        </>
-                      ) : (
-                        <>Read More</>
-                      )}
-                    </Link>
-                  </div>
-                </div>
-              </div>
+              <NewsCard key={item.id} item={item} />
             ))
           )}
         </div>

@@ -2,22 +2,26 @@
 
 import { useAppDispatch, useAppSelector } from "@/redux/hook";
 import { useEffect } from "react";
-import { fetchNews } from "./contentAPI";
-import { setFeed } from "./contentSlice";
+import { fetchNewsForCategory } from "./contentSlice";
 
 export function useLoadContent() {
-  const dispatch = useAppDispatch(); //dispatch fn type for sending action to reducer
-  const categories = useAppSelector((state) => state.preferences.categories); //taking in state - preferences, check preferencesSlice.ts
+  const dispatch = useAppDispatch();
+
+  const categories = useAppSelector((state) => state.preferences.categories);
+  const activeCategory = useAppSelector((state) => state.preferences.activeCategory);
+  const fetchedCategories = useAppSelector((state) => state.content.fetchedCategories);
 
   useEffect(() => {
-    async function load() {
-      try {
-        const news = await fetchNews(categories);
-        dispatch(setFeed(news));
-      } catch (error) {
-        console.error("Error fetching news:", error);
+    if (activeCategory === "all") {
+      categories.forEach((category) => {
+        if (!fetchedCategories.includes(category)) {
+          dispatch(fetchNewsForCategory(category));
+        }
+      });
+    } else {
+      if (!fetchedCategories.includes(activeCategory)) {
+        dispatch(fetchNewsForCategory(activeCategory));
       }
     }
-    load();
-  }, [categories, dispatch]); // if catergories change, reload the news
+  }, [categories, activeCategory, fetchedCategories, dispatch]);
 }

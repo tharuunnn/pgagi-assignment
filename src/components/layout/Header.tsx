@@ -12,25 +12,30 @@ export default function Header({ onSearchChange }: HeaderProps) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
-    const theme = localStorage.getItem("theme");
-    const darkQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const storedTheme = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
 
-    const defaultDark = theme === "dark" || (!theme && darkQuery.matches);
-    setIsDark(defaultDark);
-    updateHtmlClass(defaultDark);
+    const isDarkMode = storedTheme === "dark" || (!storedTheme && prefersDark);
+    setIsDark(isDarkMode);
+    updateHtmlClass(isDarkMode);
     setMounted(true);
   }, []);
 
   const updateHtmlClass = (dark: boolean) => {
-    if (dark) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
+    const root = document.documentElement;
+    if (dark) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
   };
 
   const toggleTheme = () => {
     const next = !isDark;
     setIsDark(next);
     updateHtmlClass(next);
-    localStorage.setItem("theme", next ? "dark" : "light");
   };
 
   if (!mounted) return null;

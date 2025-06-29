@@ -1,13 +1,28 @@
 "use client";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import NewsSection from "@/components/sections/NewsSection";
+import NewsCard from "@/components/cards/NewsCard";
 import { useAppSelector } from "@/redux/hook";
+import { useLoadContent } from "@/features/content/useLoadContent";
+import Loader from "@/components//Loader"; 
 
 export default function FavouritesPage() {
-  const favourites = useAppSelector((state) => state.content.feed).filter(
-    (item) => item.isFavourite
-  );
+  useLoadContent(); // Ensure feed is loaded
+
+  const feed = useAppSelector((state) => state.content.feed);
+
+  if (feed.length === 0) {
+    return (
+      <DashboardLayout>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800 dark:text-white">
+          Your Favourites
+        </h2>
+        <Loader /> 
+      </DashboardLayout>
+    );
+  }
+
+  const favourites = feed.filter((item) => item.isFavourite);
 
   return (
     <DashboardLayout>
@@ -22,7 +37,7 @@ export default function FavouritesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {favourites.map((item) => (
-            <NewsSection key={item.id} item={item} />
+            <NewsCard key={item.id} item={item} />
           ))}
         </div>
       )}
