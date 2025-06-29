@@ -1,4 +1,5 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import { fetchNews } from "./contentAPI";
 
 export interface ContentItem {
   id: string;
@@ -7,14 +8,17 @@ export interface ContentItem {
   url: string;
   type: string;
   description: string;
+  category: string;
   isFavourite?: boolean;
 }
 
 interface ContentState {
   feed: ContentItem[];
   searchTerm: string;
+  fetchedCategories: string[]; // ✅ To prevent refetch
 }
 
+// 🔹 Load saved favourites
 const loadFavouriteIds = (): Set<string> => {
   try {
     const stored = localStorage.getItem("favourites");
@@ -24,10 +28,21 @@ const loadFavouriteIds = (): Set<string> => {
   }
 };
 
+// 🔹 Initial State
 const initialState: ContentState = {
   feed: [],
   searchTerm: "",
+  fetchedCategories: [],
 };
+
+// ✅ Async thunk to fetch news for a single category
+export const fetchNewsForCategory = createAsyncThunk(
+  "content/fetchNewsForCategory",
+  async (category: string) => {
+    const articles = await fetchNews([category]);
+    return { category, articles };
+  }
+);
 
 const contentSlice = createSlice({
   name: "content",
@@ -59,8 +74,31 @@ const contentSlice = createSlice({
       state.searchTerm = action.payload;
     },
   },
+
+  extraReducers: (builder) => {
+    builder.addCase(fetchNewsForCategory.fulfilled, (state, action) => {
+      const { category, articles } = action.payload;
+
+      // Avoid duplicates
+      const existingIds = new Set(state.feed.map((i) => i.id));
+      const newArticles = articles.filter((a) => !existingIds.has(a.id));
+
+      const favouriteIds = loadFavouriteIds();
+
+      state.feed.push(
+        ...newArticles.map((item) => ({
+          ...item,
+          isFavourite: favouriteIds.has(item.id),
+        }))
+      );
+
+      // ✅ Add to fetched category tracker
+      if (!state.fetchedCategories.includes(category)) {
+        state.fetchedCategories.push(category);
+      }
+    });
+  },
 });
 
-export const { setSearchTerm } = contentSlice.actions; //exporting the setSearchTerm action creator
-export const { setFeed, toggleFavourite } = contentSlice.actions; //exporting the setFeed and toggleFavourite action creators
+export const { setFeed, toggleFavourite, setSearchTerm } = contentSlice.actions;
 export default contentSlice.reducer;

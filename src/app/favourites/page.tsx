@@ -1,7 +1,7 @@
 "use client";
 
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import ContentCard from "@/components/sections/NewsSection";
+import NewsSection from "@/components/sections/NewsSection";
 import { useAppSelector } from "@/redux/hook";
 
 export default function FavouritesPage() {
@@ -22,7 +22,7 @@ export default function FavouritesPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {favourites.map((item) => (
-            <ContentCard key={item.id} item={item} />
+            <NewsSection key={item.id} item={item} />
           ))}
         </div>
       )}
