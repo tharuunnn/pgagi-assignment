@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning // 👈 this suppresses dark class mismatch warning
+      suppressHydrationWarning // this suppresses dark class mismatch warning
     >
       <head>
         <script

@@ -14,8 +14,6 @@ export default function NewsCard({ item }: { item: ContentItem }) {
     dispatch(toggleFavourite(item.id));
   };
 
-  console.log("NewsCard item:", item);
-
   return (
     <div className="flex flex-col w-full max-w-sm mx-auto bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow h-full">
       <div className="relative w-full aspect-video overflow-hidden">

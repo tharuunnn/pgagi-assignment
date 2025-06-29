@@ -49,6 +49,7 @@ export default function SpotifySection() {
                 width={500}
                 height={160}
                 unoptimized
+                priority
               />
               <h3 className="font-semibold text-gray-800 dark:text-gray-100">
                 {track.name}
