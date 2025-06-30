@@ -10,17 +10,25 @@ import { useAppDispatch, useAppSelector } from "@/redux/hook";
 import { AnimatePresence, motion } from "framer-motion";
 import debounce from "lodash.debounce";
 import { Music, Newspaper } from "lucide-react";
-import { signIn, useSession } from "next-auth/react";
-import { useCallback, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
 
 export default function PersonalizedPage() {
-  const { data: session, status } = useSession();
   useLoadContent();
 
-  const feed = useAppSelector((state) => state.content.feed);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const searchTerm = useAppSelector((state) => state.content.searchTerm);
   const dispatch = useAppDispatch();
-  const [showNews, setShowNews] = useState(true);
+  const [showNews, setShowNews] = useState(
+    searchParams?.get("view") !== "tracks"
+  );
+
+  useEffect(() => {
+    setShowNews(searchParams?.get("view") !== "tracks");
+  }, [searchParams]);
 
   const handleSearch = useCallback(
     debounce((value: string) => {
@@ -29,14 +37,9 @@ export default function PersonalizedPage() {
     []
   );
 
-  const filteredFeed = feed.filter((item) => {
-    const title = item.title?.toLowerCase() || "";
-    const description = item.description?.toLowerCase() || "";
-    return (
-      title.includes(searchTerm.toLowerCase()) ||
-      description.includes(searchTerm.toLowerCase())
-    );
-  });
+  const handleToggle = (news: boolean) => {
+    router.push(`${pathname}?view=${news ? "news" : "tracks"}`);
+  };
 
   return (
     <DashboardLayout Header={<Header onSearchChange={handleSearch} />}>
@@ -61,7 +64,7 @@ export default function PersonalizedPage() {
               transition={{ delay: 0.2 }}
             >
               <motion.button
-                onClick={() => setShowNews(true)}
+                onClick={() => handleToggle(true)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   showNews
                     ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
@@ -74,7 +77,7 @@ export default function PersonalizedPage() {
                 News
               </motion.button>
               <motion.button
-                onClick={() => setShowNews(false)}
+                onClick={() => handleToggle(false)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                   !showNews
                     ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
@@ -96,47 +99,9 @@ export default function PersonalizedPage() {
         {/* Main Content Area */}
         <AnimatePresence mode="wait">
           {showNews ? (
-            <motion.div
-              key="news"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              <NewsSection />
-            </motion.div>
+            <NewsSection key="news" variant="default" />
           ) : (
-            <motion.div
-              key="songs"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-            >
-              {status === "unauthenticated" ? (
-                <motion.div
-                  className="text-center py-12"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-                    Connect Spotify
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    Connect your Spotify account to see your top tracks
-                  </p>
-                  <button
-                    className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium"
-                    onClick={() => signIn("spotify")}
-                  >
-                    Connect Spotify
-                  </button>
-                </motion.div>
-              ) : (
-                <SpotifySection />
-              )}
-            </motion.div>
+            <SpotifySection key="spotify" />
           )}
         </AnimatePresence>
       </div>

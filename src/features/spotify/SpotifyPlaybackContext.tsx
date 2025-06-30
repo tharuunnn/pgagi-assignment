@@ -1,5 +1,6 @@
 "use client";
 
+/// <reference types="spotify-web-playback-sdk" />
 import { useSession } from "next-auth/react";
 import {
   createContext,
@@ -8,6 +9,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import toast from "react-hot-toast";
 
 interface SpotifyPlaybackContextType {
   currentTrackId: string | null;
@@ -16,6 +18,9 @@ interface SpotifyPlaybackContextType {
   pauseTrack: () => Promise<void>;
   togglePlay: (trackId: string, trackUri: string) => Promise<void>;
   playerReady: boolean;
+  player: Spotify.Player | null;
+  deviceId: string | null;
+  setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 const SpotifyPlaybackContext = createContext<
@@ -26,15 +31,21 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
   const { data: session } = useSession();
   const [currentTrackId, setCurrentTrackId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [player, setPlayer] = useState<any>(null);
+  const [player, setPlayer] = useState<Spotify.Player | null>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!session?.accessToken) {
+      console.log("No access token available for player");
       setPlayerReady(false);
       return;
     }
+
+    console.log(
+      "Initializing Spotify player with token:",
+      session.accessToken.substring(0, 10) + "..."
+    );
 
     // Initialize Spotify Web Playback SDK
     const script = document.createElement("script");
@@ -53,20 +64,16 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       });
 
       // Error handling
-      player.addListener("initialization_error", ({ message }) => {
-        console.warn("Spotify player initialization error:", message);
-        setPlayerReady(false);
+      player.addListener("initialization_error", (e: Spotify.Error) => {
+        console.error("Initialization Error:", e.message);
       });
 
-      player.addListener("authentication_error", ({ message }) => {
-        console.warn("Spotify authentication error:", message);
-        setPlayerReady(false);
-        // Don't throw error, just log it
+      player.addListener("authentication_error", (e: Spotify.Error) => {
+        toast.error("Spotify authentication failed. Please reconnect.");
       });
 
-      player.addListener("account_error", ({ message }) => {
-        console.warn("Spotify account error:", message);
-        setPlayerReady(false);
+      player.addListener("account_error", (e: Spotify.Error) => {
+        console.error("Account Error:", e.message);
       });
 
       player.addListener("playback_error", ({ message }) => {
@@ -85,7 +92,7 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       });
 
       // Ready
-      player.addListener("ready", ({ device_id }) => {
+      player.addListener("ready", ({ device_id }: { device_id: string }) => {
         console.log("Ready with Device ID", device_id);
         setDeviceId(device_id);
         setPlayer(player);
@@ -93,10 +100,13 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       });
 
       // Not Ready
-      player.addListener("not_ready", ({ device_id }) => {
-        console.log("Device ID has gone offline", device_id);
-        setPlayerReady(false);
-      });
+      player.addListener(
+        "not_ready",
+        ({ device_id }: { device_id: string }) => {
+          console.log("Device ID has gone offline", device_id);
+          setPlayerReady(false);
+        }
+      );
 
       // Connect to the player
       player.connect().catch((error) => {
@@ -193,6 +203,9 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
         pauseTrack,
         togglePlay,
         playerReady,
+        player,
+        deviceId,
+        setIsPlaying,
       }}
     >
       {children}

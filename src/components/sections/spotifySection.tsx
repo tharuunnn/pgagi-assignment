@@ -6,6 +6,7 @@ import { useSpotifyPlayback } from "@/features/spotify/SpotifyPlaybackContext";
 import { useTopTracks } from "@/features/spotify/useSpotifyTracks";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 
 export default function SpotifySection() {
   const { tracks, loading } = useTopTracks();
@@ -15,6 +16,19 @@ export default function SpotifySection() {
   const [pageIndex, setPageIndex] = useState(0);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [localTracks, setLocalTracks] = useState(tracks);
+
+  // Add this to show authentication errors
+  const { status } = useSession();
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check for authentication errors
+    if (!playerReady && tracks.length > 0) {
+      setAuthError("Spotify player failed to initialize. You may need to reconnect your account.");
+    } else {
+      setAuthError(null);
+    }
+  }, [playerReady, tracks.length]);
 
   const itemsPerPage = expanded ? 10 : 5;
   const start = pageIndex * itemsPerPage;
@@ -83,6 +97,17 @@ export default function SpotifySection() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
+      {authError && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <p>{authError}</p>
+          <button 
+            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+            onClick={() => signIn("spotify")}
+          >
+            Reconnect Spotify
+          </button>
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 auto-rows-fr">
           <AnimatePresence mode="wait">
@@ -174,3 +199,4 @@ export default function SpotifySection() {
     </motion.section>
   );
 }
+

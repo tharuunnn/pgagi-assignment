@@ -1,15 +1,19 @@
 // pages/api/news.ts
-import type { NextApiRequest, NextApiResponse } from "next";
-import axios from "axios";
 import { ContentItem } from "@/features/content/contentSlice"; // adjust if needed
+import { fetchWithRetry } from "@/lib/fetchWithRetry";
+import axios from "axios";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY!;
 
 // In-memory cache
-const cache: Record<string, ContentItem[]> = {};
+const cache: { [key: string]: any } = {};
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { categories } = req.query;
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse
+) {
+  const { categories, page = "1" } = req.query;
 
   if (!categories) {
     return res.status(400).json({ error: "Missing categories" });
@@ -28,37 +32,46 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const results = await Promise.all(
-      categoryList.map(async (category) => {
-        const response = await axios.get("https://newsapi.org/v2/top-headlines", {
+    const results = [];
+    for (const category of categoryList) {
+      await new Promise((r) => setTimeout(r, 500)); // delay to avoid rate limit
+      const response = await fetchWithRetry(() =>
+        axios.get("https://newsapi.org/v2/top-headlines", {
           params: {
             category,
             country: "us",
             apiKey: NEWS_API_KEY,
+            pageSize: 20,
+            page,
           },
-        });
+        })
+      );
+      if (!response.data.articles || !Array.isArray(response.data.articles)) {
+        console.error("No articles returned from NewsAPI", response.data);
+        return res.status(500).json({ error: "Failed to fetch articles" });
+      }
+      results.push(
+        response.data.articles.map(
+          (article: any, idx: number): ContentItem => ({
+            id: `${article.title}-${idx}`,
+            type: "article",
+            title: article.title,
+            description: article.description,
+            image: article.urlToImage,
+            url: article.url,
+            category,
+            isFavourite: false,
+          })
+        )
+      );
+    }
+    const flattenedResults = results.flat();
 
-        return response.data.articles.map((article: any, idx: number): ContentItem => ({
-          id: `${article.title}-${idx}`,
-          type: "news",
-          title: article.title,
-          description: article.description,
-          image: article.urlToImage,
-          url: article.url,
-          category,
-          isFavourite: false,
-        }));
-      })
-    );
+    cache[cacheKey] = flattenedResults;
 
-    const allArticles = results.flat();
-
-    // 🔹 Save to cache
-    cache[cacheKey] = allArticles;
-
-    res.status(200).json(allArticles);
-  } catch (err) {
-    console.error("API error:", err);
+    res.status(200).json(flattenedResults);
+  } catch (error) {
+    console.error("Error fetching news:", error);
     res.status(500).json({ error: "Failed to fetch news" });
   }
 }

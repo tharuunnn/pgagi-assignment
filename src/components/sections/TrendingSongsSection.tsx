@@ -1,186 +1,135 @@
 "use client";
 
-import DraggableSpotifyCard from "@/components/cards/DraggableSpotifyCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { useSpotifyPlayback } from "@/features/spotify/SpotifyPlaybackContext";
-import { useSpotifyTracks } from "@/features/spotify/useSpotifyTracks";
 import { AnimatePresence, motion } from "framer-motion";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
+
+interface YouTubeVideo {
+  id: string;
+  snippet: {
+    title: string;
+    channelTitle: string;
+    thumbnails: {
+      medium: {
+        url: string;
+      };
+    };
+  };
+}
 
 export default function TrendingSongsSection() {
-  const { tracks, loading } = useSpotifyTracks();
-  const { currentTrackId, isPlaying, togglePlay, playerReady } =
-    useSpotifyPlayback();
-  const [expanded, setExpanded] = useState(false);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [localTracks, setLocalTracks] = useState(tracks);
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextPageToken, setNextPageToken] = useState<string | null>(null);
 
-  const itemsPerPage = expanded ? 8 : 4;
-  const start = pageIndex * itemsPerPage;
-  const end = start + itemsPerPage;
-  const currentTracks = localTracks.slice(start, end);
-  const hasMore = localTracks.length > end;
+  const fetchVideos = async (token: string | null = null) => {
+    let url = "/api/trending-yt";
+    if (token) {
+      url += `?pageToken=${token}`;
+    }
+    const res = await fetch(url);
 
-  const handleExpand = () => {
-    setExpanded(true);
-    setPageIndex(0);
+    if (!res.ok) {
+      const errorData = await res.json();
+      throw new Error(
+        errorData.message || "Failed to fetch YouTube trending music"
+      );
+    }
+    return res.json();
   };
 
-  const handleNext = () => {
-    if (hasMore) setPageIndex((prev) => prev + 1);
-  };
+  useEffect(() => {
+    async function getInitialVideos() {
+      try {
+        setLoading(true);
+        const data = await fetchVideos();
+        setVideos(data.items);
+        setNextPageToken(data.nextPageToken);
+      } catch (err: any) {
+        console.error(err);
+        toast.error(err.message || "Could not load trending songs.");
+      } finally {
+        setLoading(false);
+      }
+    }
+    getInitialVideos();
+  }, []);
 
-  const handleBack = () => {
-    if (pageIndex > 0) setPageIndex((prev) => prev - 1);
-  };
+  const handleLoadMore = async () => {
+    if (!nextPageToken) return;
 
-  const handleReorder = (fromIndex: number, toIndex: number) => {
-    const newTracks = [...localTracks];
-    const [movedTrack] = newTracks.splice(fromIndex, 1);
-    newTracks.splice(toIndex, 0, movedTrack);
-    setLocalTracks(newTracks);
-  };
-
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-  };
-
-  const handlePlayToggle = (trackId: string) => {
-    const track = tracks.find((t) => t.id === trackId);
-    if (track) {
-      togglePlay(trackId, track.uri);
+    try {
+      setLoadingMore(true);
+      const data = await fetchVideos(nextPageToken);
+      setVideos((prevVideos) => [...prevVideos, ...data.items]);
+      setNextPageToken(data.nextPageToken);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Could not load more songs.");
+    } finally {
+      setLoadingMore(false);
     }
   };
 
-  // Update local tracks when tracks change
-  if (tracks.length > 0 && localTracks.length === 0) {
-    setLocalTracks(tracks);
-  }
-
   if (loading) {
-    return (
-      <section className="mb-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Trending Songs
-          </h2>
-          <div className="flex justify-center py-20">
-            <LoadingSpinner size="lg" text="Loading trending songs..." />
-          </div>
-        </div>
-      </section>
-    );
+    return <LoadingSpinner text="Loading Trending Songs..." />;
   }
 
   return (
-    <motion.section
-      className="mb-12"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <div className="max-w-7xl mx-auto px-4">
-        <motion.h2
-          className="text-2xl font-bold text-gray-900 dark:text-white mb-4"
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          Trending Songs
-        </motion.h2>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-fr">
-          <AnimatePresence mode="wait">
-            {currentTracks.map((track, index) => (
-              <motion.div
-                key={track.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.1,
-                }}
-                layout
-              >
-                <DraggableSpotifyCard
-                  track={track}
-                  index={index}
-                  onReorder={handleReorder}
-                  isDragging={draggedIndex === index}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragEnd={handleDragEnd}
-                  isPlaying={currentTrackId === track.id && isPlaying}
-                  onPlayToggle={handlePlayToggle}
-                  playerReady={playerReady}
-                />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-
-        {/* Controls */}
-        <motion.div
-          className="flex justify-end gap-4 mt-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          {!expanded && currentTracks.length >= 4 && (
-            <motion.button
-              onClick={handleExpand}
-              className="text-sm px-3 py-1.5 bg-white text-gray-800 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+    <section className="mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <AnimatePresence>
+          {videos.map((video, index) => (
+            <motion.div
+              key={video.id + `-${index}`}
+              className="h-full"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              layout
             >
-              Expand
-            </motion.button>
-          )}
-
-          {expanded && (
-            <>
-              {pageIndex === 0 ? (
-                <motion.button
-                  onClick={() => {
-                    setExpanded(false);
-                    setPageIndex(0);
-                  }}
-                  className="text-sm px-3 py-1.5 bg-red-100 text-red-800 dark:bg-red-700 dark:text-white rounded hover:bg-red-200 dark:hover:bg-red-600 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Collapse
-                </motion.button>
-              ) : (
-                <motion.button
-                  onClick={handleBack}
-                  className="text-sm px-3 py-1.5 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Back
-                </motion.button>
-              )}
-
-              {hasMore && (
-                <motion.button
-                  onClick={handleNext}
-                  className="text-sm px-3 py-1.5 bg-blue-600 text-white dark:bg-blue-500 dark:text-white rounded hover:bg-blue-500 dark:hover:bg-blue-400 transition-colors"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  Next
-                </motion.button>
-              )}
-            </>
-          )}
-        </motion.div>
+              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col h-full">
+                <img
+                  src={video.snippet.thumbnails.medium.url}
+                  alt={video.snippet.title}
+                  className="rounded mb-2 w-full h-40 object-cover"
+                />
+                <h3 className="font-semibold text-center mb-1 line-clamp-2 flex-grow">
+                  {video.snippet.title}
+                </h3>
+                <p className="text-sm text-gray-500 dark:text-gray-300 text-center mb-2">
+                  {video.snippet.channelTitle}
+                </p>
+                <div className="w-full flex justify-center mt-auto pt-2">
+                  <iframe
+                    width="100%"
+                    height="180"
+                    src={`https://www.youtube.com/embed/${video.id}`}
+                    title={video.snippet.title}
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </AnimatePresence>
       </div>
-    </motion.section>
+      {nextPageToken && (
+        <div className="text-center mt-8">
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+          >
+            {loadingMore ? "Loading..." : "Load More"}
+          </button>
+        </div>
+      )}
+    </section>
   );
 }

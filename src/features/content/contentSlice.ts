@@ -1,21 +1,27 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { fetchNews } from "./contentAPI";
+import * as contentAPI from "./contentAPI";
 
 export interface ContentItem {
   id: string;
   title: string;
+  description: string;
   image: string;
   url: string;
-  type: string;
-  description: string;
   category: string;
+  type: "article" | "spotify";
   isFavourite?: boolean;
 }
 
-interface ContentState {
+export interface ContentState {
   feed: ContentItem[];
   trendingFeed: ContentItem[];
+  status: "idle" | "loading" | "succeeded" | "failed";
+  error: string | null;
   searchTerm: string;
+  canFetchMoreNews: boolean;
+  canFetchMoreTrending: boolean;
+  newsApiPage: number;
+  trendingApiPage: number;
   fetchedCategories: string[];
 }
 
@@ -34,24 +40,31 @@ const loadFavouriteIds = (): Set<string> => {
 const initialState: ContentState = {
   feed: [],
   trendingFeed: [],
+  status: "idle",
+  error: null,
   searchTerm: "",
+  canFetchMoreNews: true,
+  canFetchMoreTrending: true,
+  newsApiPage: 1,
+  trendingApiPage: 1,
   fetchedCategories: [],
 };
 
 // 🔹 Thunk: Fetch news for a specific category
-export const fetchNewsForCategory = createAsyncThunk(
-  "content/fetchNewsForCategory",
-  async (category: string) => {
-    const articles = await fetchNews([category]);
-    return { category, articles };
+export const fetchNews = createAsyncThunk(
+  "content/fetchNews",
+  async ({ categories, page }: { categories: string[]; page: number }) => {
+    const articles = await contentAPI.fetchNews(categories, page);
+    return articles;
   }
 );
 
 // 🔹 Thunk: Fetch trending news (based on popularity or headlines)
 export const fetchTrendingNews = createAsyncThunk(
   "content/fetchTrendingNews",
-  async () => {
-    const articles = await fetchNews([], true); // `true` signifies trending
+  async ({ page }: { page: number }) => {
+    const res = await fetch(`/api/trending?page=${page}`);
+    const articles = await res.json();
     return articles;
   }
 );
@@ -99,32 +112,56 @@ const contentSlice = createSlice({
   },
 
   extraReducers: (builder) => {
-    builder.addCase(fetchNewsForCategory.fulfilled, (state, action) => {
-      const { category, articles } = action.payload;
-      const existingIds = new Set(state.feed.map((i) => i.id));
-      const favouriteIds = loadFavouriteIds();
+    builder
+      .addCase(fetchNews.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchNews.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const newArticles = action.payload;
+        if (action.meta.arg.page === 1) {
+          state.feed = newArticles;
+        } else {
+          state.feed = [...state.feed, ...newArticles];
+        }
+        state.canFetchMoreNews = newArticles.length > 0;
+        state.newsApiPage = action.meta.arg.page;
 
-      const newArticles = articles
-        .filter((article) => !existingIds.has(article.id))
-        .map((article) => ({
-          ...article,
-          isFavourite: favouriteIds.has(article.id),
-        }));
+        const fetchedCats = action.meta.arg.categories;
 
-      state.feed.push(...newArticles);
-
-      if (!state.fetchedCategories.includes(category)) {
-        state.fetchedCategories.push(category);
-      }
-    });
-
-    builder.addCase(fetchTrendingNews.fulfilled, (state, action) => {
-      const favouriteIds = loadFavouriteIds();
-      state.trendingFeed = action.payload.map((item) => ({
-        ...item,
-        isFavourite: favouriteIds.has(item.id),
-      }));
-    });
+        if (fetchedCats.length > 1) {
+          // This was the initial "all" fetch
+          state.fetchedCategories.push("all", ...fetchedCats);
+        } else if (fetchedCats.length === 1) {
+          // This was a fetch for a single category
+          const category = fetchedCats[0];
+          if (!state.fetchedCategories.includes(category)) {
+            state.fetchedCategories.push(category);
+          }
+        }
+      })
+      .addCase(fetchNews.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || null;
+      })
+      .addCase(fetchTrendingNews.pending, (state) => {
+        state.status = "loading";
+      })
+      .addCase(fetchTrendingNews.fulfilled, (state, action) => {
+        state.status = "succeeded";
+        const newArticles = action.payload;
+        if (action.meta.arg.page === 1) {
+          state.trendingFeed = newArticles;
+        } else {
+          state.trendingFeed = [...state.trendingFeed, ...newArticles];
+        }
+        state.canFetchMoreTrending = newArticles.length > 0;
+        state.trendingApiPage = action.meta.arg.page;
+      })
+      .addCase(fetchTrendingNews.rejected, (state, action) => {
+        state.status = "failed";
+        state.error = action.error.message || null;
+      });
   },
 });
 

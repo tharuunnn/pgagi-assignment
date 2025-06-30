@@ -1,7 +1,9 @@
 "use client";
 
+import { getFromCache, setInCache } from "@/lib/cache";
 import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import toast from "react-hot-toast";
 
 interface SpotifyTrack {
   id: string;
@@ -20,19 +22,36 @@ export function useSpotifyTracks() {
   const { data: session, status } = useSession();
   const [tracks, setTracks] = useState<SpotifyTrack[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status !== "authenticated") {
+      console.log("Not authenticated yet");
+      return;
+    }
+
+    console.log("Session status:", status);
+    console.log("Session data:", session);
+    console.log("Access token:", session?.accessToken);
 
     // If refresh failed, prompt user to reconnect Spotify
     if (session.hasRefreshFailed) {
+      console.log("Token refresh failed, redirecting to sign in");
       signIn("spotify"); // Redirect to reconnect
       return;
     }
 
     const fetchTrendingTracks = async () => {
       try {
-        console.log("Access Token:", session?.accessToken);
+        if (!session.accessToken) {
+          throw new Error("No access token available");
+        }
+
+        console.log(
+          "Making request with token:",
+          session.accessToken.substring(0, 10) + "..."
+        );
+
         // Fetch tracks from Spotify's Top 50 Global playlist
         const playlistResponse = await fetch(
           "https://api.spotify.com/v1/playlists/37i9dQZEVXbMDoHDwVN2tF/tracks?limit=50",
@@ -43,11 +62,22 @@ export function useSpotifyTracks() {
           }
         );
 
+        console.log("Response status:", playlistResponse.status);
+
         if (!playlistResponse.ok) {
-          throw new Error("Failed to fetch playlist");
+          const errorText = await playlistResponse.text();
+          console.error("Playlist response error:", errorText);
+          throw new Error(
+            `Failed to fetch playlist: ${playlistResponse.status} - ${errorText}`
+          );
         }
 
         const playlistData = await playlistResponse.json();
+        console.log(
+          "Got playlist data with items:",
+          playlistData.items?.length
+        );
+
         const playlistTracks = playlistData.items
           .filter((item: any) => item.track && item.track.id) // Filter out null tracks
           .map((item: any) => ({
@@ -62,6 +92,7 @@ export function useSpotifyTracks() {
         setTracks(playlistTracks);
       } catch (error) {
         console.error("Error fetching Spotify tracks:", error);
+        setError(error instanceof Error ? error.message : String(error));
         setTracks([]);
       } finally {
         setLoading(false);
@@ -71,7 +102,7 @@ export function useSpotifyTracks() {
     fetchTrendingTracks();
   }, [session, status]);
 
-  return { tracks, loading };
+  return { tracks, loading, error };
 }
 
 export function useTopTracks() {
@@ -90,6 +121,24 @@ export function useTopTracks() {
 
     const fetchTopTracks = async () => {
       try {
+        const cacheKey = "spotify-top-tracks";
+        const cachedTracks = getFromCache<any[]>(cacheKey);
+
+        if (cachedTracks) {
+          setTracks(
+            cachedTracks.map((track: any) => ({
+              id: track.id,
+              name: track.name,
+              artists: track.artists,
+              album: track.album,
+              external_urls: track.external_urls,
+              uri: track.uri,
+            }))
+          );
+          setLoading(false);
+          return;
+        }
+
         const response = await fetch(
           "https://api.spotify.com/v1/me/top/tracks?limit=50",
           {
@@ -99,21 +148,24 @@ export function useTopTracks() {
           }
         );
 
-        if (!response.ok) throw new Error("Failed to fetch tracks");
+        if (!response.ok) {
+          throw new Error("Failed to fetch top tracks");
+        }
 
         const data = await response.json();
-        const topTracks = data.items.map((track: any) => ({
-          id: track.id,
-          name: track.name,
-          artists: track.artists,
-          album: track.album,
-          external_urls: track.external_urls,
-          uri: track.uri,
-        }));
-        setTracks(topTracks);
-      } catch (error) {
-        console.error("Error fetching top tracks:", error);
-        setTracks([]);
+        setTracks(
+          data.items.map((track: any) => ({
+            id: track.id,
+            name: track.name,
+            artists: track.artists,
+            album: track.album,
+            external_urls: track.external_urls,
+            uri: track.uri,
+          }))
+        );
+        setInCache(cacheKey, data.items);
+      } catch (error: any) {
+        toast.error(error.message || "Could not load Spotify tracks.");
       } finally {
         setLoading(false);
       }

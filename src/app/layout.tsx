@@ -1,4 +1,5 @@
 import SessionWrapper from "@/components/SessionWrapper";
+import ToastProvider from "@/components/ToastProvider";
 import { SpotifyPlaybackProvider } from "@/features/spotify/SpotifyPlaybackContext";
 import { Providers } from "@/redux/provider";
 import type { Metadata } from "next";
@@ -43,7 +44,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <SessionWrapper>
           <Providers>
-            <SpotifyPlaybackProvider>{children}</SpotifyPlaybackProvider>
+            <ToastProvider>
+              <SpotifyPlaybackProvider>{children}</SpotifyPlaybackProvider>
+            </ToastProvider>
           </Providers>
         </SessionWrapper>
       </body>

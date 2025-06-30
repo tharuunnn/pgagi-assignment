@@ -1,6 +1,6 @@
 import NextAuth, { NextAuthOptions } from "next-auth";
-import SpotifyProvider from "next-auth/providers/spotify";
 import { JWT } from "next-auth/jwt";
+import SpotifyProvider from "next-auth/providers/spotify";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
@@ -39,13 +39,28 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
   }
 }
 
+const spotifyScopes = [
+  "user-read-email",
+  "streaming",
+  "user-top-read",
+  "playlist-read-private",
+  "playlist-read-collaborative",
+  //"playlist-read-public", - whore does not exist on the spotify doc
+  "user-modify-playback-state",
+  "user-read-playback-state",
+];
+
 export const authOptions: NextAuthOptions = {
   providers: [
     SpotifyProvider({
       clientId: process.env.SPOTIFY_CLIENT_ID!,
       clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-      authorization:
-        "https://accounts.spotify.com/authorize?scope=user-top-read",
+      authorization: {
+        url: "https://accounts.spotify.com/authorize",
+        params: {
+          scope: spotifyScopes.join(" "),
+        },
+      },
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
@@ -71,7 +86,7 @@ export const authOptions: NextAuthOptions = {
       // Token expired, refresh it
       const refreshed = await refreshAccessToken(token);
 
-      if ('error' in refreshed) {
+      if ("error" in refreshed) {
         return {
           ...refreshed,
           accessToken: null, // important
