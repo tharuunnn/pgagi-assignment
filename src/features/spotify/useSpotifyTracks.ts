@@ -18,6 +18,10 @@ interface SpotifyTrack {
   uri: string;
 }
 
+interface PlaylistItem {
+  track: SpotifyTrack;
+}
+
 export function useSpotifyTracks() {
   const { data: session, status } = useSession();
   const [tracks, setTracks] = useState<SpotifyTrack[]>([]);
@@ -79,8 +83,8 @@ export function useSpotifyTracks() {
         );
 
         const playlistTracks = playlistData.items
-          .filter((item: any) => item.track && item.track.id) // Filter out null tracks
-          .map((item: any) => ({
+          .filter((item: PlaylistItem) => item.track && item.track.id) // Filter out null tracks
+          .map((item: PlaylistItem) => ({
             id: item.track.id,
             name: item.track.name,
             artists: item.track.artists,
@@ -122,11 +126,11 @@ export function useTopTracks() {
     const fetchTopTracks = async () => {
       try {
         const cacheKey = "spotify-top-tracks";
-        const cachedTracks = getFromCache<any[]>(cacheKey);
+        const cachedTracks = getFromCache<SpotifyTrack[]>(cacheKey);
 
         if (cachedTracks) {
           setTracks(
-            cachedTracks.map((track: any) => ({
+            cachedTracks.map((track: SpotifyTrack) => ({
               id: track.id,
               name: track.name,
               artists: track.artists,
@@ -154,7 +158,7 @@ export function useTopTracks() {
 
         const data = await response.json();
         setTracks(
-          data.items.map((track: any) => ({
+          data.items.map((track: SpotifyTrack) => ({
             id: track.id,
             name: track.name,
             artists: track.artists,
@@ -164,8 +168,12 @@ export function useTopTracks() {
           }))
         );
         setInCache(cacheKey, data.items);
-      } catch (error: any) {
-        toast.error(error.message || "Could not load Spotify tracks.");
+      } catch (error) {
+        if (error instanceof Error) {
+          toast.error(error.message || "Could not load Spotify tracks.");
+        } else {
+          toast.error("An unknown error occurred.");
+        }
       } finally {
         setLoading(false);
       }

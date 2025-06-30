@@ -5,7 +5,7 @@ export async function fetchWithRetry<T>(
   for (let i = 0; i < attempts; i++) {
     try {
       return await fetchFn();
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (i === attempts - 1) {
         // Last attempt, re-throw the error
         throw error;

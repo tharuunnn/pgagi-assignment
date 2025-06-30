@@ -6,8 +6,15 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 const NEWS_API_KEY = process.env.NEWS_API_KEY!;
 
+interface Article {
+  title: string;
+  description: string;
+  urlToImage: string;
+  url: string;
+}
+
 // In-memory cache
-const cache: { [key: string]: any } = {};
+const cache: { [key: string]: ContentItem[] } = {};
 
 export default async function handler(
   req: NextApiRequest,
@@ -52,7 +59,7 @@ export default async function handler(
       }
       results.push(
         response.data.articles.map(
-          (article: any, idx: number): ContentItem => ({
+          (article: Article, idx: number): ContentItem => ({
             id: `${article.title}-${idx}`,
             type: "article",
             title: article.title,
