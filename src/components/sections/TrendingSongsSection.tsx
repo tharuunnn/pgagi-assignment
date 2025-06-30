@@ -20,6 +20,7 @@ import { AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import DraggableYouTubeCard from "../cards/DraggableYouTubeCard";
+import { useAppSelector } from "@/redux/hook";
 
 interface YouTubeVideo {
   id: string;
@@ -39,6 +40,7 @@ export default function TrendingSongsSection() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+  const searchTerm = useAppSelector((state) => state.content.searchTerm);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -115,7 +117,16 @@ export default function TrendingSongsSection() {
     return <LoadingSpinner text="Loading Trending Songs..." />;
   }
 
-  const videoIds = videos.map((v) => v.id);
+  // Filter videos by search term
+  const filteredVideos = videos.filter((video) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      video.snippet.title.toLowerCase().includes(term) ||
+      video.snippet.channelTitle.toLowerCase().includes(term)
+    );
+  });
+
+  const videoIds = filteredVideos.map((v) => v.id);
 
   return (
     <section className="mb-12">
@@ -127,7 +138,7 @@ export default function TrendingSongsSection() {
         <SortableContext items={videoIds} strategy={rectSortingStrategy}>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AnimatePresence>
-              {videos.map((video) => (
+              {filteredVideos.map((video) => (
                 <DraggableYouTubeCard key={video.id} video={video} />
               ))}
             </AnimatePresence>

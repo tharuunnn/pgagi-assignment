@@ -4,6 +4,7 @@ import DraggableSpotifyCard from "@/components/cards/DraggableSpotifyCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useSpotifyPlayback } from "@/features/spotify/SpotifyPlaybackContext";
 import { useTopTracks } from "@/features/spotify/useSpotifyTracks";
+import { useAppSelector } from "@/redux/hook";
 import {
   closestCenter,
   DndContext,
@@ -27,6 +28,7 @@ export default function SpotifySection() {
   const { tracks, loading } = useTopTracks();
   const { currentTrackId, isPlaying, togglePlay, playerReady } =
     useSpotifyPlayback();
+  const searchTerm = useAppSelector((state) => state.content.searchTerm);
   const [expanded, setExpanded] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
   const [localTracks, setLocalTracks] = useState(tracks);
@@ -41,23 +43,38 @@ export default function SpotifySection() {
   // Add this to show authentication errors
   const [authError, setAuthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Check for authentication errors
-    if (!playerReady && tracks.length > 0) {
-      setAuthError(
-        "Spotify player failed to initialize. You may need to reconnect your account."
-      );
-    } else {
-      setAuthError(null);
-    }
-  }, [playerReady, tracks.length]);
+  // useEffect(() => {
+  //   // Check for authentication errors
+  //   if (!playerReady && tracks.length > 0) {
+  //     setAuthError(
+  //       "Spotify player failed to initialize. You may need to reconnect your account."
+  //     );
+  //   } else {
+  //     setAuthError(null);
+  //   }
+  // }, [playerReady, tracks.length]);
 
+  // Update local tracks when tracks change
+  useEffect(() => {
+    if (tracks.length > 0) {
+      setLocalTracks(tracks);
+    }
+  }, [tracks]);
+
+  // Filter tracks by search term
+  const filteredTracks = localTracks.filter((track) => {
+    const term = searchTerm.toLowerCase();
+    return (
+      track.name.toLowerCase().includes(term) ||
+      track.artists.some((artist) => artist.name.toLowerCase().includes(term))
+    );
+  });
   const itemsPerPage = expanded ? 10 : 5;
   const start = pageIndex * itemsPerPage;
   const end = start + itemsPerPage;
-  const currentTracks = localTracks.slice(start, end);
+  const currentTracks = filteredTracks.slice(start, end);
   const currentTrackIds = currentTracks.map((track) => track.id);
-  const hasMore = localTracks.length > end;
+  const hasMore = filteredTracks.length > end;
 
   const handleExpand = () => {
     setExpanded(true);
@@ -90,13 +107,6 @@ export default function SpotifySection() {
       togglePlay(trackId, track.uri);
     }
   };
-
-  // Update local tracks when tracks change
-  useEffect(() => {
-    if (tracks.length > 0) {
-      setLocalTracks(tracks);
-    }
-  }, [tracks]);
 
   if (loading) {
     return (
