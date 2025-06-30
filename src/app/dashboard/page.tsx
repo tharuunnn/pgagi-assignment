@@ -6,7 +6,7 @@ import NewsSection from "@/components/sections/NewsSection";
 import SpotifySection from "@/components/sections/spotifySection";
 import { setSearchTerm } from "@/features/content/contentSlice";
 import { useLoadContent } from "@/features/content/useLoadContent";
-import { useAppDispatch, useAppSelector } from "@/redux/hook";
+import { useAppDispatch } from "@/redux/hook";
 import { AnimatePresence, motion } from "framer-motion";
 import debounce from "lodash.debounce";
 import { Music, Newspaper } from "lucide-react";
@@ -20,7 +20,6 @@ export default function PersonalizedPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const searchTerm = useAppSelector((state) => state.content.searchTerm);
   const dispatch = useAppDispatch();
   const [showNews, setShowNews] = useState(
     searchParams?.get("view") !== "tracks"
