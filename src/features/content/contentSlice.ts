@@ -14,11 +14,12 @@ export interface ContentItem {
 
 interface ContentState {
   feed: ContentItem[];
+  trendingFeed: ContentItem[];
   searchTerm: string;
-  fetchedCategories: string[]; 
+  fetchedCategories: string[];
 }
 
-// 🔹 Load saved favourites
+// 🔹 Load favourites from localStorage
 const loadFavouriteIds = (): Set<string> => {
   if (typeof window === "undefined") return new Set();
   try {
@@ -29,19 +30,29 @@ const loadFavouriteIds = (): Set<string> => {
   }
 };
 
-// 🔹 Initial State
+// 🔹 Initial state
 const initialState: ContentState = {
   feed: [],
+  trendingFeed: [],
   searchTerm: "",
   fetchedCategories: [],
 };
 
-// Async thunk to fetch news for a single category
+// 🔹 Thunk: Fetch news for a specific category
 export const fetchNewsForCategory = createAsyncThunk(
   "content/fetchNewsForCategory",
   async (category: string) => {
     const articles = await fetchNews([category]);
     return { category, articles };
+  }
+);
+
+// 🔹 Thunk: Fetch trending news (based on popularity or headlines)
+export const fetchTrendingNews = createAsyncThunk(
+  "content/fetchTrendingNews",
+  async () => {
+    const articles = await fetchNews([], true); // `true` signifies trending
+    return articles;
   }
 );
 
@@ -51,24 +62,35 @@ const contentSlice = createSlice({
   reducers: {
     setFeed(state, action: PayloadAction<ContentItem[]>) {
       const favouriteIds = loadFavouriteIds();
-
       state.feed = action.payload.map((item) => ({
         ...item,
         isFavourite: favouriteIds.has(item.id),
       }));
     },
 
+    setTrendingFeed(state, action: PayloadAction<ContentItem[]>) {
+      const favouriteIds = loadFavouriteIds();
+      state.trendingFeed = action.payload.map((item) => ({
+        ...item,
+        isFavourite: favouriteIds.has(item.id),
+      }));
+    },
+
     toggleFavourite(state, action: PayloadAction<string>) {
-      const item = state.feed.find((i) => i.id === action.payload);
-      if (!item) return;
+      const toggleInList = (list: ContentItem[]) => {
+        const item = list.find((i) => i.id === action.payload);
+        if (item) item.isFavourite = !item.isFavourite;
+      };
 
-      item.isFavourite = !item.isFavourite;
+      toggleInList(state.feed);
+      toggleInList(state.trendingFeed);
 
-      const newFavouriteIds = state.feed
-        .filter((i) => i.isFavourite)
-        .map((i) => i.id);
+      const allItems = [...state.feed, ...state.trendingFeed];
+      const newFavourites = Array.from(
+        new Set(allItems.filter((i) => i.isFavourite).map((i) => i.id))
+      );
 
-      localStorage.setItem("favourites", JSON.stringify(newFavouriteIds));
+      localStorage.setItem("favourites", JSON.stringify(newFavourites));
     },
 
     setSearchTerm(state, action: PayloadAction<string>) {
@@ -79,27 +101,38 @@ const contentSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(fetchNewsForCategory.fulfilled, (state, action) => {
       const { category, articles } = action.payload;
-
-      // Avoid duplicates
       const existingIds = new Set(state.feed.map((i) => i.id));
-      const newArticles = articles.filter((a) => !existingIds.has(a.id));
-
       const favouriteIds = loadFavouriteIds();
 
-      state.feed.push(
-        ...newArticles.map((item) => ({
-          ...item,
-          isFavourite: favouriteIds.has(item.id),
-        }))
-      );
+      const newArticles = articles
+        .filter((article) => !existingIds.has(article.id))
+        .map((article) => ({
+          ...article,
+          isFavourite: favouriteIds.has(article.id),
+        }));
 
-      // 
+      state.feed.push(...newArticles);
+
       if (!state.fetchedCategories.includes(category)) {
         state.fetchedCategories.push(category);
       }
     });
+
+    builder.addCase(fetchTrendingNews.fulfilled, (state, action) => {
+      const favouriteIds = loadFavouriteIds();
+      state.trendingFeed = action.payload.map((item) => ({
+        ...item,
+        isFavourite: favouriteIds.has(item.id),
+      }));
+    });
   },
 });
 
-export const { setFeed, toggleFavourite, setSearchTerm } = contentSlice.actions;
+export const {
+  setFeed,
+  setTrendingFeed,
+  toggleFavourite,
+  setSearchTerm,
+} = contentSlice.actions;
+
 export default contentSlice.reducer;

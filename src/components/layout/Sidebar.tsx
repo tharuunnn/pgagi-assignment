@@ -1,12 +1,12 @@
 "use client";
 
-import { Home, Settings, Star } from "lucide-react";
+import { Home, Flame, Star } from "lucide-react";
 import Link from "next/link";
 
 const navItems = [
   { name: "Main page", href: "/dashboard", icon: <Home size={20} /> },
   { name: "Favourites", href: "/favourites", icon: <Star size={20} /> },
-  { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
+  { name: "Trending", href: "/trending", icon: <Flame size={20} /> },
 ];
 
 export default function Sidebar() {
