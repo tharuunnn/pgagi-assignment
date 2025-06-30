@@ -39,7 +39,9 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
   useLoadTrending();
 
   const feed = useAppSelector((state) => state.content.feed);
-  const trendingFeed = useAppSelector((state) => state.content.trendingFeed);
+  const trendingNewsFeed = useAppSelector(
+    (state) => state.content.trendingNewsFeed
+  );
   const searchTerm = useAppSelector((state) => state.content.searchTerm);
   const activeCategory = useAppSelector(
     (state) => state.preferences.activeCategory
@@ -47,12 +49,12 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
   const canFetchMoreNews = useAppSelector(
     (state) => state.content.canFetchMoreNews
   );
-  const canFetchMoreTrending = useAppSelector(
-    (state) => state.content.canFetchMoreTrending
+  const canFetchMoreTrendingNews = useAppSelector(
+    (state) => state.content.canFetchMoreTrendingNews
   );
   const newsApiPage = useAppSelector((state) => state.content.newsApiPage);
-  const trendingApiPage = useAppSelector(
-    (state) => state.content.trendingApiPage
+  const trendingNewsApiPage = useAppSelector(
+    (state) => state.content.trendingNewsApiPage
   );
   const status = useAppSelector((state) => state.content.status);
 
@@ -69,10 +71,10 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
     }
   }, [status]);
 
-  const currentFeed = variant === "trending" ? trendingFeed : feed;
+  const currentFeed = variant === "trending" ? trendingNewsFeed : feed;
   const canFetchMore =
-    variant === "trending" ? canFetchMoreTrending : canFetchMoreNews;
-  const apiPage = variant === "trending" ? trendingApiPage : newsApiPage;
+    variant === "trending" ? canFetchMoreTrendingNews : canFetchMoreNews;
+  const apiPage = variant === "trending" ? trendingNewsApiPage : newsApiPage;
 
   const [expanded, setExpanded] = useState(false);
   const [page, setPage] = useState(0);
@@ -232,7 +234,7 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
               <motion.button
                 onClick={() => setPage(page - 1)}
                 disabled={page === 0}
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                className="px-4 py-2 bg-gray-200 text-gray-800 border border-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-600 rounded disabled:opacity-50"
               >
                 Back
               </motion.button>
@@ -242,7 +244,7 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
                   page * itemsPerPage >= localFeed.length - itemsPerPage &&
                   !canFetchMore
                 }
-                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded disabled:opacity-50"
+                className="px-4 py-2 bg-blue-600 text-white border border-blue-700 dark:bg-blue-500 dark:text-white dark:border-blue-400 rounded disabled:bg-gray-400 hover:bg-blue-500 dark:hover:bg-blue-400 transition-colors disabled:opacity-50"
               >
                 Next
               </motion.button>

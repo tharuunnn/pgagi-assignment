@@ -2,28 +2,15 @@
 
 import LoadingSpinner from "@/components/LoadingSpinner";
 import {
-  closestCenter,
-  DndContext,
-  DragEndEvent,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  rectSortingStrategy,
-  SortableContext,
-  sortableKeyboardCoordinates,
-} from "@dnd-kit/sortable";
-import { AnimatePresence } from "framer-motion";
+  ContentItem,
+  setTrendingSongsFeed,
+} from "@/features/content/contentSlice";
+import { useAppDispatch, useAppSelector } from "@/redux/hook";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import DraggableYouTubeCard from "../cards/DraggableYouTubeCard";
-import { useAppSelector } from "@/redux/hook";
+import YouTubeCard from "../cards/YouTubeCard";
 
-interface YouTubeVideo {
-  id: string;
+interface YouTubeSongItem extends ContentItem {
   snippet: {
     title: string;
     channelTitle: string;
@@ -36,17 +23,14 @@ interface YouTubeVideo {
 }
 
 export default function TrendingSongsSection() {
-  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+  const dispatch = useAppDispatch();
+  const [videos, setVideos] = useState<YouTubeSongItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
   const searchTerm = useAppSelector((state) => state.content.searchTerm);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+  const trendingSongsFeed = useAppSelector(
+    (state) => state.content.trendingSongsFeed
   );
 
   const fetchVideos = async (token: string | null = null) => {
@@ -70,7 +54,24 @@ export default function TrendingSongsSection() {
       try {
         setLoading(true);
         const data = await fetchVideos();
-        setVideos(data.items);
+        // Get favourite IDs from localStorage
+        const favouriteIds = new Set(
+          JSON.parse(localStorage.getItem("favourites") || "[]")
+        );
+        // Map YouTube API results to ContentItem shape for Redux
+        const mapped = data.items.map((video: YouTubeSongItem) => ({
+          ...video,
+          id: video.id,
+          title: video.snippet.title,
+          description: "",
+          image: video.snippet.thumbnails.medium.url,
+          url: `https://www.youtube.com/watch?v=${video.id}`,
+          category: "music",
+          type: "spotify",
+          isFavourite: favouriteIds.has(video.id),
+        }));
+        setVideos(mapped);
+        dispatch(setTrendingSongsFeed(mapped));
         setNextPageToken(data.nextPageToken);
       } catch (err) {
         console.error(err);
@@ -84,16 +85,12 @@ export default function TrendingSongsSection() {
     getInitialVideos();
   }, []);
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setVideos((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
+  useEffect(() => {
+    // Only update if trendingSongsFeed is not empty
+    if (trendingSongsFeed.length > 0) {
+      setVideos(trendingSongsFeed as YouTubeSongItem[]);
     }
-  };
+  }, [trendingSongsFeed]);
 
   const handleLoadMore = async () => {
     if (!nextPageToken) return;
@@ -101,7 +98,24 @@ export default function TrendingSongsSection() {
     try {
       setLoadingMore(true);
       const data = await fetchVideos(nextPageToken);
-      setVideos((prevVideos) => [...prevVideos, ...data.items]);
+      // Get favourite IDs from localStorage
+      const favouriteIds = new Set(
+        JSON.parse(localStorage.getItem("favourites") || "[]")
+      );
+      // Map YouTube API results to ContentItem shape for Redux
+      const mapped = data.items.map((video: YouTubeSongItem) => ({
+        ...video,
+        id: video.id,
+        title: video.snippet.title,
+        description: "",
+        image: video.snippet.thumbnails.medium.url,
+        url: `https://www.youtube.com/watch?v=${video.id}`,
+        category: "music",
+        type: "spotify",
+        isFavourite: favouriteIds.has(video.id),
+      }));
+      setVideos((prevVideos) => [...prevVideos, ...mapped]);
+      dispatch(setTrendingSongsFeed([...videos, ...mapped]));
       setNextPageToken(data.nextPageToken);
     } catch (err) {
       console.error(err);
@@ -121,41 +135,31 @@ export default function TrendingSongsSection() {
   const filteredVideos = videos.filter((video) => {
     const term = searchTerm.toLowerCase();
     return (
-      video.snippet.title.toLowerCase().includes(term) ||
+      video.title.toLowerCase().includes(term) ||
       video.snippet.channelTitle.toLowerCase().includes(term)
     );
   });
 
-  const videoIds = filteredVideos.map((v) => v.id);
-
   return (
     <section className="mb-12">
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragEnd={handleDragEnd}
-      >
-        <SortableContext items={videoIds} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            <AnimatePresence>
-              {filteredVideos.map((video) => (
-                <DraggableYouTubeCard key={video.id} video={video} />
-              ))}
-            </AnimatePresence>
-          </div>
-        </SortableContext>
-      </DndContext>
-      {nextPageToken && (
-        <div className="text-center mt-8">
-          <button
-            onClick={handleLoadMore}
-            disabled={loadingMore}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-          >
-            {loadingMore ? "Loading..." : "Load More"}
-          </button>
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredVideos.map((video) => (
+            <YouTubeCard key={video.id} video={video} />
+          ))}
         </div>
-      )}
+        {nextPageToken && (
+          <div className="text-center mt-8">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+            >
+              {loadingMore ? "Loading..." : "Load More"}
+            </button>
+          </div>
+        )}
+      </div>
     </section>
   );
 }

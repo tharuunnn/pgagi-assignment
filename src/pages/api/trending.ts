@@ -4,10 +4,27 @@ import { fetchWithRetry } from "@/lib/fetchWithRetry";
 import { NextApiRequest, NextApiResponse } from "next";
 
 interface Article {
+  source: { id: string | null; name: string };
+  author?: string;
   title: string;
   url: string;
   urlToImage: string;
   description: string;
+  publishedAt: string;
+}
+
+// Simple hash function for stable IDs
+function hashString(str: string): string {
+  let hash = 0,
+    i,
+    chr;
+  if (str.length === 0) return hash.toString();
+  for (i = 0; i < str.length; i++) {
+    chr = str.charCodeAt(i);
+    hash = (hash << 5) - hash + chr;
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash.toString();
 }
 
 export default async function handler(
@@ -54,17 +71,26 @@ export default async function handler(
         .json({ error: "Trending API returned no articles" });
     }
 
-    const mapped = data.articles.map((article: Article, index: number) => ({
-      id: article.url || `trending-${index}`,
-      title: article.title || "No title",
-      image: article.urlToImage || "",
-      url: article.url,
-      type: "article",
-      description: article.description || "",
-      category: "trending",
-    }));
+    const mapped = data.articles.map((article: Article) => {
+      // Use a stable hash of source.id+title+url+publishedAt for ID
+      const stableId = hashString(
+        (article.source?.id || "") +
+          (article.title || "") +
+          (article.url || "") +
+          (article.publishedAt || "")
+      );
+      return {
+        id: stableId,
+        title: article.title || "No title",
+        image: article.urlToImage || "",
+        url: article.url,
+        type: "article",
+        description: article.description || "",
+        category: "trending",
+      };
+    });
 
-    setInCache(cacheKey, mapped);
+    setInCache(cacheKey, mapped.slice(0, 15));
     res.status(200).json(mapped);
   } catch (error) {
     console.error("Trending API error:", error);

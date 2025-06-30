@@ -25,7 +25,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function SpotifySection() {
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { tracks, loading } = useTopTracks();
   const { currentTrackId, isPlaying, togglePlay, playerReady } =
     useSpotifyPlayback();
@@ -110,13 +110,15 @@ export default function SpotifySection() {
   if (status === "unauthenticated") {
     return (
       <section className="mb-12 text-center py-20">
-        <h2 className="text-2xl font-semibold mb-4">Connect Your Spotify</h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <h2 className="text-2xl font-semibold mb-4 text-black dark:text-white">
+          Connect Your Spotify
+        </h2>
+        <p className="text-gray-700 dark:text-gray-400 mb-6">
           Sign in to see your top tracks and listen to music.
         </p>
         <button
           onClick={() => signIn("spotify")}
-          className="bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-colors"
+          className="bg-green-500 text-white font-bold py-3 px-6 rounded-lg border-2 border-green-700 shadow-lg hover:bg-green-600 hover:border-green-800 transition-colors focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2"
         >
           Connect to Spotify
         </button>
@@ -190,7 +192,7 @@ export default function SpotifySection() {
               ) : (
                 <motion.button
                   onClick={handleBack}
-                  className="text-sm px-3 py-1.5 bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="text-sm px-3 py-1.5 bg-gray-200 text-gray-800 border border-gray-400 dark:bg-gray-700 dark:text-white dark:border-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -201,7 +203,7 @@ export default function SpotifySection() {
               {hasMore && (
                 <motion.button
                   onClick={handleNext}
-                  className="text-sm px-3 py-1.5 bg-blue-600 text-white dark:bg-blue-500 dark:text-white rounded hover:bg-blue-500 dark:hover:bg-blue-400 transition-colors"
+                  className="text-sm px-3 py-1.5 bg-blue-600 text-white border border-blue-700 dark:bg-blue-500 dark:text-white dark:border-blue-400 rounded hover:bg-blue-500 dark:hover:bg-blue-400 transition-colors"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >

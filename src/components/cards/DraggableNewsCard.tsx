@@ -38,7 +38,7 @@ export default function DraggableNewsCard({ item }: DraggableNewsCardProps) {
   const currentItem = useAppSelector(
     (state) =>
       state.content.feed.find((i) => i.id === item.id) ||
-      state.content.trendingFeed.find((i) => i.id === item.id)
+      state.content.trendingNewsFeed.find((i) => i.id === item.id)
   );
 
   const isFavourite = currentItem?.isFavourite || item.isFavourite || false;
@@ -79,6 +79,19 @@ export default function DraggableNewsCard({ item }: DraggableNewsCardProps) {
           className="absolute top-2 left-2 z-10 p-1 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
         >
           <GripVertical size={16} className="text-white" />
+        </div>
+
+        {/* Category Tag */}
+        <div className="absolute top-3 left-3">
+          <span
+            className={`px-3 py-1 text-xs font-medium rounded-full shadow-sm ${
+              item.type === "spotify"
+                ? "bg-green-100 text-green-700 dark:bg-black/90 dark:text-primary-400"
+                : "bg-blue-100 text-blue-700 dark:bg-black/90 dark:text-primary-400"
+            }`}
+          >
+            {item.type === "spotify" ? "Music" : "News"}
+          </span>
         </div>
 
         <div className="relative w-full aspect-video overflow-hidden">

@@ -4,7 +4,11 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 import Header from "@/components/layout/Header";
 import TrendingNewsSection from "@/components/sections/NewsSection";
 import TrendingSongsSection from "@/components/sections/TrendingSongsSection";
-import { setSearchTerm } from "@/features/content/contentSlice";
+import {
+  clearTrendingNewsFeed,
+  clearTrendingSongsFeed,
+  setSearchTerm,
+} from "@/features/content/contentSlice";
 import { useLoadTrending } from "@/features/content/useLoadTrending";
 import { useAppDispatch } from "@/redux/hook";
 import { AnimatePresence, motion } from "framer-motion";
@@ -37,6 +41,11 @@ export default function TrendingClient() {
   );
 
   const handleToggle = (news: boolean) => {
+    if (news) {
+      dispatch(clearTrendingSongsFeed());
+    } else {
+      dispatch(clearTrendingNewsFeed());
+    }
     router.push(`${pathname}?view=${news ? "news" : "songs"}`);
   };
 

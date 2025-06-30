@@ -8,20 +8,23 @@ export interface ContentItem {
   image: string;
   url: string;
   category: string;
-  type: "article" | "spotify";
+  type: "article" | "spotify" | "news";
   isFavourite?: boolean;
 }
 
 export interface ContentState {
   feed: ContentItem[];
-  trendingFeed: ContentItem[];
+  trendingNewsFeed: ContentItem[];
+  trendingSongsFeed: ContentItem[];
   status: "idle" | "loading" | "succeeded" | "failed";
   error: string | null;
   searchTerm: string;
   canFetchMoreNews: boolean;
-  canFetchMoreTrending: boolean;
+  canFetchMoreTrendingNews: boolean;
+  canFetchMoreTrendingSongs: boolean;
   newsApiPage: number;
-  trendingApiPage: number;
+  trendingNewsApiPage: number;
+  trendingSongsApiPage: number;
   fetchedCategories: string[];
 }
 
@@ -36,17 +39,31 @@ const loadFavouriteIds = (): Set<string> => {
   }
 };
 
+// Helper: Load favourite news articles from localStorage
+const loadFavouriteNewsArticles = (): ContentItem[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const stored = localStorage.getItem("favouriteNewsArticles");
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
 // 🔹 Initial state
 const initialState: ContentState = {
   feed: [],
-  trendingFeed: [],
+  trendingNewsFeed: [],
+  trendingSongsFeed: [],
   status: "idle",
   error: null,
   searchTerm: "",
   canFetchMoreNews: true,
-  canFetchMoreTrending: true,
+  canFetchMoreTrendingNews: true,
+  canFetchMoreTrendingSongs: true,
   newsApiPage: 1,
-  trendingApiPage: 1,
+  trendingNewsApiPage: 1,
+  trendingSongsApiPage: 1,
   fetchedCategories: [],
 };
 
@@ -75,15 +92,45 @@ const contentSlice = createSlice({
   reducers: {
     setFeed(state, action: PayloadAction<ContentItem[]>) {
       const favouriteIds = loadFavouriteIds();
-      state.feed = action.payload.map((item) => ({
+      const favouriteArticles = loadFavouriteNewsArticles();
+      // Merge API articles with favourited articles from localStorage
+      const merged = [
+        ...action.payload,
+        ...favouriteArticles.filter(
+          (fav) => !action.payload.some((item) => item.id === fav.id)
+        ),
+      ];
+      state.feed = merged.map((item) => ({
         ...item,
-        isFavourite: favouriteIds.has(item.id),
+        isFavourite:
+          favouriteIds.has(item.id) ||
+          favouriteArticles.some((fav) => fav.id === item.id),
+        type: "news",
       }));
     },
 
-    setTrendingFeed(state, action: PayloadAction<ContentItem[]>) {
+    setTrendingNewsFeed(state, action: PayloadAction<ContentItem[]>) {
       const favouriteIds = loadFavouriteIds();
-      state.trendingFeed = action.payload.map((item) => ({
+      const favouriteArticles = loadFavouriteNewsArticles();
+      // Merge API articles with favourited articles from localStorage
+      const merged = [
+        ...action.payload,
+        ...favouriteArticles.filter(
+          (fav) => !action.payload.some((item) => item.id === fav.id)
+        ),
+      ];
+      state.trendingNewsFeed = merged.map((item) => ({
+        ...item,
+        isFavourite:
+          favouriteIds.has(item.id) ||
+          favouriteArticles.some((fav) => fav.id === item.id),
+        type: "news",
+      }));
+    },
+
+    setTrendingSongsFeed(state, action: PayloadAction<ContentItem[]>) {
+      const favouriteIds = loadFavouriteIds();
+      state.trendingSongsFeed = action.payload.map((item) => ({
         ...item,
         isFavourite: favouriteIds.has(item.id),
       }));
@@ -96,18 +143,55 @@ const contentSlice = createSlice({
       };
 
       toggleInList(state.feed);
-      toggleInList(state.trendingFeed);
+      toggleInList(state.trendingNewsFeed);
+      toggleInList(state.trendingSongsFeed);
 
-      const allItems = [...state.feed, ...state.trendingFeed];
+      const allItems = [
+        ...state.feed,
+        ...state.trendingNewsFeed,
+        ...state.trendingSongsFeed,
+      ];
       const newFavourites = Array.from(
         new Set(allItems.filter((i) => i.isFavourite).map((i) => i.id))
       );
-
       localStorage.setItem("favourites", JSON.stringify(newFavourites));
+
+      // --- News Favourites: Robustly store/remove full article for news ---
+      // Load current favouriteNewsArticles
+      let favouriteNewsArticles = loadFavouriteNewsArticles();
+      // Find the toggled article in all feeds
+      const toggledArticle = allItems.find(
+        (i) => i.id === action.payload && i.type !== "spotify"
+      );
+      if (toggledArticle) {
+        if (toggledArticle.isFavourite) {
+          // Add if not already present
+          if (!favouriteNewsArticles.some((a) => a.id === toggledArticle.id)) {
+            favouriteNewsArticles.push({ ...toggledArticle, type: "news" });
+          }
+        } else {
+          // Remove if present
+          favouriteNewsArticles = favouriteNewsArticles.filter(
+            (a) => a.id !== toggledArticle.id
+          );
+        }
+        localStorage.setItem(
+          "favouriteNewsArticles",
+          JSON.stringify(favouriteNewsArticles)
+        );
+      }
     },
 
     setSearchTerm(state, action: PayloadAction<string>) {
       state.searchTerm = action.payload;
+    },
+
+    clearTrendingNewsFeed(state) {
+      state.trendingNewsFeed = [];
+    },
+
+    clearTrendingSongsFeed(state) {
+      state.trendingSongsFeed = [];
     },
   },
 
@@ -118,7 +202,11 @@ const contentSlice = createSlice({
       })
       .addCase(fetchNews.fulfilled, (state, action) => {
         state.status = "succeeded";
-        const newArticles = action.payload;
+        const favouriteIds = loadFavouriteIds();
+        const newArticles = action.payload.map((item: ContentItem) => ({
+          ...item,
+          isFavourite: favouriteIds.has(item.id),
+        }));
         if (action.meta.arg.page === 1) {
           state.feed = newArticles;
         } else {
@@ -149,14 +237,18 @@ const contentSlice = createSlice({
       })
       .addCase(fetchTrendingNews.fulfilled, (state, action) => {
         state.status = "succeeded";
-        const newArticles = action.payload;
+        const favouriteIds = loadFavouriteIds();
+        const newArticles = action.payload.map((item: ContentItem) => ({
+          ...item,
+          isFavourite: favouriteIds.has(item.id),
+        }));
         if (action.meta.arg.page === 1) {
-          state.trendingFeed = newArticles;
+          state.trendingNewsFeed = newArticles;
         } else {
-          state.trendingFeed = [...state.trendingFeed, ...newArticles];
+          state.trendingNewsFeed = [...state.trendingNewsFeed, ...newArticles];
         }
-        state.canFetchMoreTrending = newArticles.length > 0;
-        state.trendingApiPage = action.meta.arg.page;
+        state.canFetchMoreTrendingNews = newArticles.length > 0;
+        state.trendingNewsApiPage = action.meta.arg.page;
       })
       .addCase(fetchTrendingNews.rejected, (state, action) => {
         state.status = "failed";
@@ -165,7 +257,14 @@ const contentSlice = createSlice({
   },
 });
 
-export const { setFeed, setTrendingFeed, toggleFavourite, setSearchTerm } =
-  contentSlice.actions;
+export const {
+  setFeed,
+  setTrendingNewsFeed,
+  setTrendingSongsFeed,
+  toggleFavourite,
+  setSearchTerm,
+  clearTrendingNewsFeed,
+  clearTrendingSongsFeed,
+} = contentSlice.actions;
 
 export default contentSlice.reducer;

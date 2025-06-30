@@ -1,3 +1,4 @@
+import { getFromCache, setInCache } from "@/lib/cache";
 import { NextApiRequest, NextApiResponse } from "next";
 
 export default async function handler(
@@ -18,6 +19,12 @@ export default async function handler(
       .json({ message: "YouTube API key is not configured" });
   }
 
+  const cacheKey = "yt-trending-songs";
+  const cachedData = getFromCache<any[]>(cacheKey);
+  if (cachedData) {
+    return res.status(200).json({ items: cachedData });
+  }
+
   let url = `https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails,statistics&chart=mostPopular&regionCode=US&videoCategoryId=10&maxResults=12&key=${apiKey}`;
   if (pageToken) {
     url += `&pageToken=${pageToken}`;
@@ -33,6 +40,7 @@ export default async function handler(
       return res.status(response.status).json({ message: errorMessage });
     }
 
+    setInCache(cacheKey, (data.items || []).slice(0, 15));
     res.status(200).json({
       items: data.items || [],
       nextPageToken: data.nextPageToken,
