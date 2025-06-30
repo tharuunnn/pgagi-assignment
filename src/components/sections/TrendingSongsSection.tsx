@@ -1,9 +1,25 @@
 "use client";
 
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import DraggableYouTubeCard from "../cards/DraggableYouTubeCard";
 
 interface YouTubeVideo {
   id: string;
@@ -23,6 +39,13 @@ export default function TrendingSongsSection() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextPageToken, setNextPageToken] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const fetchVideos = async (token: string | null = null) => {
     let url = "/api/trending-yt";
@@ -47,15 +70,28 @@ export default function TrendingSongsSection() {
         const data = await fetchVideos();
         setVideos(data.items);
         setNextPageToken(data.nextPageToken);
-      } catch (err: any) {
+      } catch (err) {
         console.error(err);
-        toast.error(err.message || "Could not load trending songs.");
+        const message =
+          err instanceof Error ? err.message : "Could not load trending songs.";
+        toast.error(message);
       } finally {
         setLoading(false);
       }
     }
     getInitialVideos();
   }, []);
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setVideos((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   const handleLoadMore = async () => {
     if (!nextPageToken) return;
@@ -65,9 +101,11 @@ export default function TrendingSongsSection() {
       const data = await fetchVideos(nextPageToken);
       setVideos((prevVideos) => [...prevVideos, ...data.items]);
       setNextPageToken(data.nextPageToken);
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      toast.error(err.message || "Could not load more songs.");
+      const message =
+        err instanceof Error ? err.message : "Could not load more songs.";
+      toast.error(message);
     } finally {
       setLoadingMore(false);
     }
@@ -77,48 +115,25 @@ export default function TrendingSongsSection() {
     return <LoadingSpinner text="Loading Trending Songs..." />;
   }
 
+  const videoIds = videos.map((v) => v.id);
+
   return (
     <section className="mb-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        <AnimatePresence>
-          {videos.map((video, index) => (
-            <motion.div
-              key={video.id + `-${index}`}
-              className="h-full"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, delay: index * 0.05 }}
-              layout
-            >
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 flex flex-col h-full">
-                <img
-                  src={video.snippet.thumbnails.medium.url}
-                  alt={video.snippet.title}
-                  className="rounded mb-2 w-full h-40 object-cover"
-                />
-                <h3 className="font-semibold text-center mb-1 line-clamp-2 flex-grow text-gray-900 dark:text-white">
-                  {video.snippet.title}
-                </h3>
-                <p className="text-sm text-gray-500 dark:text-gray-300 text-center mb-2">
-                  {video.snippet.channelTitle}
-                </p>
-                <div className="w-full flex justify-center mt-auto pt-2">
-                  <iframe
-                    width="100%"
-                    height="180"
-                    src={`https://www.youtube.com/embed/${video.id}`}
-                    title={video.snippet.title}
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-      </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={videoIds} strategy={rectSortingStrategy}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <AnimatePresence>
+              {videos.map((video) => (
+                <DraggableYouTubeCard key={video.id} video={video} />
+              ))}
+            </AnimatePresence>
+          </div>
+        </SortableContext>
+      </DndContext>
       {nextPageToken && (
         <div className="text-center mt-8">
           <button

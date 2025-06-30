@@ -6,8 +6,23 @@ import { useLoadContent } from "@/features/content/useLoadContent";
 import { useLoadTrending } from "@/features/content/useLoadTrending";
 import { setActiveCategory } from "@/preferences/preferencesSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/hook";
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 import clsx from "clsx";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import DraggableNewsCard from "../cards/DraggableNewsCard";
@@ -41,6 +56,13 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
   );
   const status = useAppSelector((state) => state.content.status);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   useEffect(() => {
     if (status === "failed") {
       toast.error("API is busy, please try again later.");
@@ -55,13 +77,14 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
   const [expanded, setExpanded] = useState(false);
   const [page, setPage] = useState(0);
   const [localFeed, setLocalFeed] = useState(currentFeed);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const itemsPerPage = expanded ? 6 : 3;
   const paginatedFeed = localFeed.slice(
     page * itemsPerPage,
     (page + 1) * itemsPerPage
   );
+
+  const paginatedIds = paginatedFeed.map((item) => item.id);
 
   useEffect(() => {
     const filtered = currentFeed.filter((item) => {
@@ -87,16 +110,18 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
     setPage(0);
   };
 
-  const handleReorder = (fromIndex: number, toIndex: number) => {
-    const reorderedGlobalIndex = page * itemsPerPage + fromIndex;
-    const newFeed = [...localFeed];
-    const [movedItem] = newFeed.splice(reorderedGlobalIndex, 1);
-    newFeed.splice(page * itemsPerPage + toIndex, 0, movedItem);
-    setLocalFeed(newFeed);
-  };
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
 
-  const handleDragStart = (index: number) => setDraggedIndex(index);
-  const handleDragEnd = () => setDraggedIndex(null);
+    if (over && active.id !== over.id) {
+      setLocalFeed((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
 
   const handleNextPage = () => {
     const nextClientPage = page + 1;
@@ -180,22 +205,19 @@ export default function NewsSection({ variant = "default" }: NewsSectionProps) {
             )}
           </motion.div>
         )}
-
-        <AnimatePresence>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {paginatedFeed.map((item, index) => (
-              <DraggableNewsCard
-                key={item.id}
-                item={item}
-                index={index}
-                onReorder={handleReorder}
-                isDragging={draggedIndex === index}
-                onDragStart={() => handleDragStart(index)}
-                onDragEnd={handleDragEnd}
-              />
-            ))}
-          </div>
-        </AnimatePresence>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={paginatedIds} strategy={rectSortingStrategy}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {paginatedFeed.map((item) => (
+                <DraggableNewsCard key={item.id} item={item} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
         <div className="flex justify-center items-center mt-8 gap-4">
           {localFeed.length > 3 && (
             <button

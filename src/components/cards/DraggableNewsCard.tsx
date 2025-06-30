@@ -2,8 +2,10 @@
 
 import { ContentItem, toggleFavourite } from "@/features/content/contentSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/hook";
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { GripVertical, Heart, Play } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -11,23 +13,26 @@ import { useState } from "react";
 
 interface DraggableNewsCardProps {
   item: ContentItem;
-  index: number;
-  onReorder?: (fromIndex: number, toIndex: number) => void;
-  isDragging?: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
 }
 
-export default function DraggableNewsCard({
-  item,
-  index,
-  onReorder,
-  isDragging,
-  onDragStart,
-  onDragEnd,
-}: DraggableNewsCardProps) {
+export default function DraggableNewsCard({ item }: DraggableNewsCardProps) {
   const dispatch = useAppDispatch();
   const [isPlaying, setIsPlaying] = useState(false);
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : "auto",
+  };
 
   // Get the current favourite status from Redux state
   const currentItem = useAppSelector(
@@ -37,11 +42,6 @@ export default function DraggableNewsCard({
   );
 
   const isFavourite = currentItem?.isFavourite || item.isFavourite || false;
-
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotate = useTransform(x, [-100, 100], [-5, 5]);
-  const scale = useTransform(x, [-100, 0, 100], [0.95, 1, 0.95]);
 
   const handleFavourite = () => {
     dispatch(toggleFavourite(item.id));
@@ -55,46 +55,29 @@ export default function DraggableNewsCard({
     console.log(`${isPlaying ? "Paused" : "Playing"}: ${item.title}`);
   };
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 150; // Increased threshold for better UX
-    if (Math.abs(info.offset.x) > threshold) {
-      const direction = info.offset.x > 0 ? 1 : -1;
-      const newIndex = Math.max(0, Math.min(index + direction, 999));
-      if (newIndex !== index) {
-        onReorder?.(index, newIndex);
-      }
-    }
-    onDragEnd?.();
-  };
-
   return (
     <motion.div
+      ref={setNodeRef}
+      style={style}
       className="relative group h-full"
-      style={{ x, y, rotate, scale }}
-      drag="x"
-      dragConstraints={{ left: -150, right: 150 }}
-      dragElastic={0.1}
-      dragMomentum={false}
-      onDragStart={onDragStart}
-      onDragEnd={handleDragEnd}
-      whileHover={{
-        scale: 1.02,
-        transition: { duration: 0.2 },
-      }}
-      whileTap={{ scale: 0.98 }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
+      layout
     >
       <div
         className={clsx(
           "flex flex-col w-full bg-gray-100 dark:bg-gray-800 rounded-xl shadow-md overflow-hidden transition-all duration-300 h-full",
-          isDragging ? "shadow-2xl scale-105 z-50" : "hover:shadow-lg"
+          isDragging ? "shadow-2xl scale-105 opacity-80" : "hover:shadow-lg"
         )}
       >
         {/* Drag Handle */}
-        <div className="absolute top-2 left-2 z-10 p-1 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 z-10 p-1 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        >
           <GripVertical size={16} className="text-white" />
         </div>
 

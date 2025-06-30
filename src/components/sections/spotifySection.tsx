@@ -4,9 +4,24 @@ import DraggableSpotifyCard from "@/components/cards/DraggableSpotifyCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useSpotifyPlayback } from "@/features/spotify/SpotifyPlaybackContext";
 import { useTopTracks } from "@/features/spotify/useSpotifyTracks";
-import { AnimatePresence, motion } from "framer-motion";
+import {
+  closestCenter,
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { motion } from "framer-motion";
+import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { useSession, signIn } from "next-auth/react";
 
 export default function SpotifySection() {
   const { tracks, loading } = useTopTracks();
@@ -14,17 +29,24 @@ export default function SpotifySection() {
     useSpotifyPlayback();
   const [expanded, setExpanded] = useState(false);
   const [pageIndex, setPageIndex] = useState(0);
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [localTracks, setLocalTracks] = useState(tracks);
 
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Add this to show authentication errors
-  const { status } = useSession();
   const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // Check for authentication errors
     if (!playerReady && tracks.length > 0) {
-      setAuthError("Spotify player failed to initialize. You may need to reconnect your account.");
+      setAuthError(
+        "Spotify player failed to initialize. You may need to reconnect your account."
+      );
     } else {
       setAuthError(null);
     }
@@ -34,6 +56,7 @@ export default function SpotifySection() {
   const start = pageIndex * itemsPerPage;
   const end = start + itemsPerPage;
   const currentTracks = localTracks.slice(start, end);
+  const currentTrackIds = currentTracks.map((track) => track.id);
   const hasMore = localTracks.length > end;
 
   const handleExpand = () => {
@@ -49,20 +72,17 @@ export default function SpotifySection() {
     if (pageIndex > 0) setPageIndex((prev) => prev - 1);
   };
 
-  const handleReorder = (fromIndex: number, toIndex: number) => {
-    const newTracks = [...localTracks];
-    const [movedTrack] = newTracks.splice(fromIndex, 1);
-    newTracks.splice(toIndex, 0, movedTrack);
-    setLocalTracks(newTracks);
-  };
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
 
-  const handleDragStart = (index: number) => {
-    setDraggedIndex(index);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedIndex(null);
-  };
+    if (over && active.id !== over.id) {
+      setLocalTracks((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  }
 
   const handlePlayToggle = (trackId: string) => {
     const track = tracks.find((t) => t.id === trackId);
@@ -73,10 +93,10 @@ export default function SpotifySection() {
 
   // Update local tracks when tracks change
   useEffect(() => {
-    if (tracks.length > 0 && localTracks.length === 0) {
+    if (tracks.length > 0) {
       setLocalTracks(tracks);
     }
-  }, [tracks, localTracks.length]);
+  }, [tracks]);
 
   if (loading) {
     return (
@@ -100,7 +120,7 @@ export default function SpotifySection() {
       {authError && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           <p>{authError}</p>
-          <button 
+          <button
             className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
             onClick={() => signIn("spotify")}
           >
@@ -109,35 +129,28 @@ export default function SpotifySection() {
         </div>
       )}
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 auto-rows-fr">
-          <AnimatePresence mode="wait">
-            {currentTracks.map((track, index) => (
-              <motion.div
-                key={track.id}
-                className="h-full"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{
-                  duration: 0.3,
-                  delay: index * 0.1,
-                }}
-              >
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={currentTrackIds}
+            strategy={rectSortingStrategy}
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 auto-rows-fr">
+              {currentTracks.map((track) => (
                 <DraggableSpotifyCard
+                  key={track.id}
                   track={track}
-                  index={index}
-                  onReorder={handleReorder}
-                  isDragging={draggedIndex === index}
-                  onDragStart={() => handleDragStart(index)}
-                  onDragEnd={handleDragEnd}
                   isPlaying={currentTrackId === track.id && isPlaying}
                   onPlayToggle={handlePlayToggle}
                   playerReady={playerReady}
                 />
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         {/* Controls */}
         <motion.div
@@ -199,4 +212,3 @@ export default function SpotifySection() {
     </motion.section>
   );
 }
-

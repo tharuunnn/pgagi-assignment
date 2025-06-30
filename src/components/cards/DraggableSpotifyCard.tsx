@@ -1,7 +1,9 @@
 "use client";
 
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
-import { motion, PanInfo, useMotionValue, useTransform } from "framer-motion";
+import { motion } from "framer-motion";
 import { GripVertical, Pause, Play } from "lucide-react";
 import Image from "next/image";
 
@@ -20,11 +22,6 @@ interface SpotifyTrack {
 
 interface DraggableSpotifyCardProps {
   track: SpotifyTrack;
-  index: number;
-  onReorder?: (fromIndex: number, toIndex: number) => void;
-  isDragging?: boolean;
-  onDragStart?: () => void;
-  onDragEnd?: () => void;
   isPlaying?: boolean;
   onPlayToggle?: (trackId: string) => void;
   playerReady?: boolean;
@@ -32,19 +29,24 @@ interface DraggableSpotifyCardProps {
 
 export default function DraggableSpotifyCard({
   track,
-  index,
-  onReorder,
-  isDragging,
-  onDragStart,
-  onDragEnd,
   isPlaying = false,
   onPlayToggle,
   playerReady = false,
 }: DraggableSpotifyCardProps) {
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
-  const rotate = useTransform(x, [-100, 100], [-5, 5]);
-  const scale = useTransform(x, [-100, 0, 100], [0.95, 1, 0.95]);
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: track.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : "auto",
+  };
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,33 +58,11 @@ export default function DraggableSpotifyCard({
     }
   };
 
-  const handleDragEnd = (event: any, info: PanInfo) => {
-    const threshold = 150; // Increased threshold for better UX
-    if (Math.abs(info.offset.x) > threshold) {
-      const direction = info.offset.x > 0 ? 1 : -1;
-      const newIndex = Math.max(0, Math.min(index + direction, 999));
-      if (newIndex !== index) {
-        onReorder?.(index, newIndex);
-      }
-    }
-    onDragEnd?.();
-  };
-
   return (
     <motion.div
-      className="relative group"
-      style={{ x, y, rotate, scale }}
-      drag="x"
-      dragConstraints={{ left: -150, right: 150 }}
-      dragElastic={0.1}
-      dragMomentum={false}
-      onDragStart={onDragStart}
-      onDragEnd={handleDragEnd}
-      whileHover={{
-        scale: 1.02,
-        transition: { duration: 0.2 },
-      }}
-      whileTap={{ scale: 0.98 }}
+      ref={setNodeRef}
+      style={style}
+      className="relative group h-full"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
@@ -91,12 +71,16 @@ export default function DraggableSpotifyCard({
     >
       <div
         className={clsx(
-          "bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md flex flex-col transition-all duration-300",
-          isDragging ? "shadow-2xl scale-105 z-50" : "hover:shadow-lg"
+          "bg-white dark:bg-gray-800 rounded-lg p-4 shadow-md flex flex-col transition-all duration-300 h-full",
+          isDragging ? "shadow-2xl scale-105 opacity-80" : "hover:shadow-lg"
         )}
       >
         {/* Drag Handle */}
-        <div className="absolute top-2 left-2 z-10 p-1 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute top-2 left-2 z-10 p-1 bg-black/20 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing"
+        >
           <GripVertical size={16} className="text-white" />
         </div>
 
