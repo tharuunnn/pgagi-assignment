@@ -58,7 +58,9 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       const player = new window.Spotify.Player({
         name: "PGAGI Web Player",
         getOAuthToken: (cb) => {
-          cb(session.accessToken);
+          if (session?.accessToken) {
+            cb(session.accessToken);
+          }
         },
         volume: 0.5,
       });
