@@ -138,15 +138,22 @@ export default function DraggableNewsCard({
             <motion.button
               onClick={handleFavourite}
               className={clsx(
-                "p-1 rounded-full transition-colors flex-shrink-0",
+                "p-2 rounded-full transition-colors flex-shrink-0 hover:bg-neutral-100 dark:hover:bg-neutral-800",
                 isFavourite
-                  ? "text-red-500"
-                  : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  ? "text-red-500 dark:text-red-500"
+                  : "text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
               )}
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
             >
-              <Heart fill={isFavourite ? "currentColor" : "none"} />
+              <Heart
+                size={20}
+                fill={isFavourite ? "currentColor" : "none"}
+                className={clsx(
+                  "transition-transform duration-300",
+                  isFavourite && "animate-[heartBeat_0.3s_ease-in-out]"
+                )}
+              />
             </motion.button>
           </div>
 

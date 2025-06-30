@@ -97,7 +97,7 @@ export default function TrendingSongsSection() {
                   alt={video.snippet.title}
                   className="rounded mb-2 w-full h-40 object-cover"
                 />
-                <h3 className="font-semibold text-center mb-1 line-clamp-2 flex-grow">
+                <h3 className="font-semibold text-center mb-1 line-clamp-2 flex-grow text-gray-900 dark:text-white">
                   {video.snippet.title}
                 </h3>
                 <p className="text-sm text-gray-500 dark:text-gray-300 text-center mb-2">

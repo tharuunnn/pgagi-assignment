@@ -75,7 +75,7 @@ export default function Header({ onSearchChange }: HeaderProps) {
         <div className="relative">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className="p-2 rounded-full bg-blue-100 dark:bg-gray-700 hover:bg-blue-200 dark:hover:bg-gray-600 transition-colors"
+            className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
             title="Settings"
           >
             <Settings size={18} />
