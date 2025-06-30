@@ -73,7 +73,7 @@ export const authOptions: NextAuthOptions = {
         return {
           ...token,
           accessToken: account.access_token,
-          accessTokenExpires: now + account.expires_in * 1000, // expires_in is in seconds
+          accessTokenExpires: now + (account.expires_in as number) * 1000, // expires_in is in seconds
           refreshToken: account.refresh_token,
         };
       }
@@ -89,7 +89,7 @@ export const authOptions: NextAuthOptions = {
       if ("error" in refreshed) {
         return {
           ...refreshed,
-          accessToken: null, // important
+          accessToken: undefined, // important
           hasRefreshFailed: true,
         };
       }

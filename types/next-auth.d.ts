@@ -14,5 +14,6 @@ declare module "next-auth/jwt" {
     accessTokenExpires?: number;
     refreshToken?: string;
     error?: string;
+    hasRefreshFailed?: boolean;
   }
 }
