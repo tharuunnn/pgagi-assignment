@@ -5,6 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import clsx from "clsx";
 import { motion } from "framer-motion";
 import { GripVertical } from "lucide-react";
+import Image from "next/image";
 
 interface YouTubeVideo {
   id: string;
@@ -56,9 +57,11 @@ export default function DraggableYouTubeCard({
         >
           <GripVertical size={16} className="text-white" />
         </div>
-        <img
+        <Image
           src={video.snippet.thumbnails.medium.url}
           alt={video.snippet.title}
+          width={480}
+          height={360}
           className="rounded mb-2 w-full h-40 object-cover"
         />
         <h3 className="font-semibold text-center mb-1 line-clamp-2 flex-grow text-gray-900 dark:text-white">

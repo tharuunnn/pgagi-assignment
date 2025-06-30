@@ -21,7 +21,6 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { motion } from "framer-motion";
-import { signIn } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function SpotifySection() {
@@ -39,20 +38,6 @@ export default function SpotifySection() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
-
-  // Add this to show authentication errors
-  const [authError, setAuthError] = useState<string | null>(null);
-
-  // useEffect(() => {
-  //   // Check for authentication errors
-  //   if (!playerReady && tracks.length > 0) {
-  //     setAuthError(
-  //       "Spotify player failed to initialize. You may need to reconnect your account."
-  //     );
-  //   } else {
-  //     setAuthError(null);
-  //   }
-  // }, [playerReady, tracks.length]);
 
   // Update local tracks when tracks change
   useEffect(() => {
@@ -127,17 +112,6 @@ export default function SpotifySection() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      {authError && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{authError}</p>
-          <button
-            className="mt-2 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
-            onClick={() => signIn("spotify")}
-          >
-            Reconnect Spotify
-          </button>
-        </div>
-      )}
       <div className="max-w-7xl mx-auto px-4">
         <DndContext
           sensors={sensors}

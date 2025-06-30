@@ -64,16 +64,22 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       });
 
       // Error handling
-      player.addListener("initialization_error", (e: Spotify.Error) => {
-        console.error("Initialization Error:", e.message);
-      });
+      player.addListener(
+        "initialization_error",
+        ({ message }: Spotify.Error) => {
+          console.error("Initialization Error:", message);
+        }
+      );
 
-      player.addListener("authentication_error", (e: Spotify.Error) => {
-        toast.error("Spotify authentication failed. Please reconnect.");
-      });
+      player.addListener(
+        "authentication_error",
+        ({ message }: Spotify.Error) => {
+          toast.error(`Spotify authentication failed: ${message}`);
+        }
+      );
 
-      player.addListener("account_error", (e: Spotify.Error) => {
-        console.error("Account Error:", e.message);
+      player.addListener("account_error", ({ message }: Spotify.Error) => {
+        console.error("Account Error:", message);
       });
 
       player.addListener("playback_error", ({ message }) => {
@@ -123,7 +129,7 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
         script.parentNode.removeChild(script);
       }
     };
-  }, [session?.accessToken]);
+  }, [session?.accessToken, player]);
 
   const playTrack = async (trackId: string, trackUri: string) => {
     if (!session?.accessToken || !deviceId) {
@@ -226,7 +232,7 @@ export function useSpotifyPlayback() {
 // Add Spotify types to window
 declare global {
   interface Window {
-    Spotify: any;
+    Spotify: typeof Spotify;
     onSpotifyWebPlaybackSDKReady: () => void;
   }
 }
