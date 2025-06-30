@@ -1,4 +1,5 @@
 import SessionWrapper from "@/components/SessionWrapper";
+import { SpotifyPlaybackProvider } from "@/features/spotify/SpotifyPlaybackContext";
 import { Providers } from "@/redux/provider";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
@@ -41,7 +42,9 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <SessionWrapper>
-          <Providers>{children}</Providers>
+          <Providers>
+            <SpotifyPlaybackProvider>{children}</SpotifyPlaybackProvider>
+          </Providers>
         </SessionWrapper>
       </body>
     </html>

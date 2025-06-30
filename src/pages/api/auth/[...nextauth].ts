@@ -56,6 +56,7 @@ export const authOptions: NextAuthOptions = {
       // First sign in
       if (account) {
         return {
+          ...token,
           accessToken: account.access_token,
           accessTokenExpires: now + account.expires_in * 1000, // expires_in is in seconds
           refreshToken: account.refresh_token,

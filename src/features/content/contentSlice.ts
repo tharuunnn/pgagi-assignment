@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { fetchNews } from "./contentAPI";
 
 export interface ContentItem {
@@ -128,11 +128,7 @@ const contentSlice = createSlice({
   },
 });
 
-export const {
-  setFeed,
-  setTrendingFeed,
-  toggleFavourite,
-  setSearchTerm,
-} = contentSlice.actions;
+export const { setFeed, setTrendingFeed, toggleFavourite, setSearchTerm } =
+  contentSlice.actions;
 
 export default contentSlice.reducer;

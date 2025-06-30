@@ -3,12 +3,12 @@
 import DraggableSpotifyCard from "@/components/cards/DraggableSpotifyCard";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useSpotifyPlayback } from "@/features/spotify/SpotifyPlaybackContext";
-import { useTopTracks } from "@/features/spotify/useSpotifyTracks";
+import { useSpotifyTracks } from "@/features/spotify/useSpotifyTracks";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-export default function SpotifySection() {
-  const { tracks, loading } = useTopTracks();
+export default function TrendingSongsSection() {
+  const { tracks, loading } = useSpotifyTracks();
   const { currentTrackId, isPlaying, togglePlay, playerReady } =
     useSpotifyPlayback();
   const [expanded, setExpanded] = useState(false);
@@ -16,7 +16,7 @@ export default function SpotifySection() {
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [localTracks, setLocalTracks] = useState(tracks);
 
-  const itemsPerPage = expanded ? 10 : 5;
+  const itemsPerPage = expanded ? 8 : 4;
   const start = pageIndex * itemsPerPage;
   const end = start + itemsPerPage;
   const currentTracks = localTracks.slice(start, end);
@@ -58,18 +58,19 @@ export default function SpotifySection() {
   };
 
   // Update local tracks when tracks change
-  useEffect(() => {
-    if (tracks.length > 0 && localTracks.length === 0) {
-      setLocalTracks(tracks);
-    }
-  }, [tracks, localTracks.length]);
+  if (tracks.length > 0 && localTracks.length === 0) {
+    setLocalTracks(tracks);
+  }
 
   if (loading) {
     return (
       <section className="mb-12">
         <div className="max-w-7xl mx-auto px-4">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            Trending Songs
+          </h2>
           <div className="flex justify-center py-20">
-            <LoadingSpinner size="lg" text="Loading Spotify tracks..." />
+            <LoadingSpinner size="lg" text="Loading trending songs..." />
           </div>
         </div>
       </section>
@@ -84,12 +85,20 @@ export default function SpotifySection() {
       transition={{ duration: 0.5 }}
     >
       <div className="max-w-7xl mx-auto px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 auto-rows-fr">
+        <motion.h2
+          className="text-2xl font-bold text-gray-900 dark:text-white mb-4"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          Trending Songs
+        </motion.h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 auto-rows-fr">
           <AnimatePresence mode="wait">
             {currentTracks.map((track, index) => (
               <motion.div
                 key={track.id}
-                className="h-full"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
@@ -97,6 +106,7 @@ export default function SpotifySection() {
                   duration: 0.3,
                   delay: index * 0.1,
                 }}
+                layout
               >
                 <DraggableSpotifyCard
                   track={track}
@@ -121,7 +131,7 @@ export default function SpotifySection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
         >
-          {!expanded && currentTracks.length >= 5 && (
+          {!expanded && currentTracks.length >= 4 && (
             <motion.button
               onClick={handleExpand}
               className="text-sm px-3 py-1.5 bg-white text-gray-800 dark:bg-gray-700 dark:text-white rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
