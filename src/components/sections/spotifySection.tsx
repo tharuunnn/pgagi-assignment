@@ -21,9 +21,11 @@ import {
   sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { motion } from "framer-motion";
+import { signIn, useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
 export default function SpotifySection() {
+  const { data: session, status } = useSession();
   const { tracks, loading } = useTopTracks();
   const { currentTrackId, isPlaying, togglePlay, playerReady } =
     useSpotifyPlayback();
@@ -93,7 +95,7 @@ export default function SpotifySection() {
     }
   };
 
-  if (loading) {
+  if (status === "loading" || loading) {
     return (
       <section className="mb-12">
         <div className="max-w-7xl mx-auto px-4">
@@ -101,6 +103,23 @@ export default function SpotifySection() {
             <LoadingSpinner size="lg" text="Loading Spotify tracks..." />
           </div>
         </div>
+      </section>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <section className="mb-12 text-center py-20">
+        <h2 className="text-2xl font-semibold mb-4">Connect Your Spotify</h2>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">
+          Sign in to see your top tracks and listen to music.
+        </p>
+        <button
+          onClick={() => signIn("spotify")}
+          className="bg-green-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-600 transition-colors"
+        >
+          Connect to Spotify
+        </button>
       </section>
     );
   }

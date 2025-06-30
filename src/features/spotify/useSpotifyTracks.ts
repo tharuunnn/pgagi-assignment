@@ -29,8 +29,11 @@ export function useSpotifyTracks() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status === "unauthenticated") {
+      setLoading(false);
+      return;
+    }
     if (status !== "authenticated") {
-      console.log("Not authenticated yet");
       return;
     }
 
@@ -115,7 +118,13 @@ export function useTopTracks() {
   const [loading, setLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    if (status !== "authenticated") return;
+    if (status === "unauthenticated") {
+      setLoading(false);
+      return;
+    }
+    if (status !== "authenticated") {
+      return;
+    }
 
     // If refresh failed, prompt user to reconnect Spotify
     if (session.hasRefreshFailed) {

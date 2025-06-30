@@ -9,7 +9,6 @@ import {
   useEffect,
   useState,
 } from "react";
-import toast from "react-hot-toast";
 
 interface SpotifyPlaybackContextType {
   currentTrackId: string | null;
@@ -76,7 +75,7 @@ export function SpotifyPlaybackProvider({ children }: { children: ReactNode }) {
       player.addListener(
         "authentication_error",
         ({ message }: Spotify.Error) => {
-          toast.error(`Spotify authentication failed: ${message}`);
+          console.log(`Spotify authentication failed: ${message}`);
         }
       );
 
