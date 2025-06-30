@@ -13,7 +13,7 @@ export function useLoadTrending() {
   useEffect(() => {
     const fetchTrending = async () => {
       try {
-        const res = await axios.get("/api/trending");
+        const res = await axios.get("/api/trending"); 
         const favouriteIds = new Set(
           JSON.parse(localStorage.getItem("favourites") || "[]")
         );

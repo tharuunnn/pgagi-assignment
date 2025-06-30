@@ -82,19 +82,6 @@ export default function NewsCard({ item }: { item: ContentItem }) {
             </motion.div>
           </motion.button>
         )}
-
-        {/* Category Tag */}
-        <div className="absolute top-3 left-3">
-          <span
-            className={`px-3 py-1 text-xs font-medium rounded-full shadow-sm ${
-              item.type === "spotify"
-                ? "bg-green-100 text-green-700 dark:bg-black/90 dark:text-primary-400"
-                : "bg-blue-100 text-blue-700 dark:bg-black/90 dark:text-primary-400"
-            }`}
-          >
-            {item.type === "spotify" ? "Music" : "News"}
-          </span>
-        </div>
       </div>
 
       <div className="flex flex-col flex-1 p-5 gap-4">
